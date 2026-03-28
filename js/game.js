@@ -187,42 +187,54 @@ const GameEngine = (() => {
 
       if (!loopRunning) { loopRunning = true; requestAnimationFrame(gameLoop); }
 
-      // Setup A-Frame interactive object handlers
-      document.querySelectorAll('.interactive').forEach(el => {
-        el.addEventListener('mouseenter', () => {
-          if (StoryEngine.isDialogueActive() || StoryEngine.isCutsceneActive()) return;
-          const interaction = InteractionSystem.getInteraction(el.getAttribute('data-interaction'));
-          if (interaction) {
-            document.getElementById('prompt-text').textContent = interaction.prompt;
-            document.getElementById('interaction-prompt').classList.remove('hidden');
-            document.getElementById('crosshair').classList.add('active');
-          }
-        });
+      // Setup interaction detection using cursor events (handles child mesh hits)
+      const cursorEl = document.querySelector('[cursor]');
+      let currentHoveredInteractive = null;
 
-        el.addEventListener('mouseleave', () => {
+      cursorEl.addEventListener('raycaster-intersection', (evt) => {
+        if (StoryEngine.isDialogueActive() || StoryEngine.isCutsceneActive()) return;
+        // Find the .interactive ancestor of the hit element
+        const hitEl = evt.detail.els[0];
+        const interactive = hitEl.closest ? hitEl.closest('.interactive') : 
+          (hitEl.classList && hitEl.classList.contains('interactive') ? hitEl : hitEl.parentEl && hitEl.parentEl.closest('.interactive'));
+        
+        if (!interactive) return;
+        currentHoveredInteractive = interactive;
+        const interaction = InteractionSystem.getInteraction(interactive.getAttribute('data-interaction'));
+        if (interaction) {
+          document.getElementById('prompt-text').textContent = interaction.prompt;
+          document.getElementById('interaction-prompt').classList.remove('hidden');
+          document.getElementById('crosshair').classList.add('active');
+        }
+      });
+
+      cursorEl.addEventListener('raycaster-intersection-cleared', () => {
+        currentHoveredInteractive = null;
+        document.getElementById('interaction-prompt').classList.add('hidden');
+        document.getElementById('crosshair').classList.remove('active');
+      });
+
+      // Click handler — uses whatever the crosshair is currently pointing at
+      document.querySelector('.a-canvas').addEventListener('click', () => {
+        if (hasDragged || !currentHoveredInteractive) return;
+        if (StoryEngine.isDialogueActive() || StoryEngine.isCutsceneActive()) return;
+
+        const el = currentHoveredInteractive;
+        const interaction = InteractionSystem.getInteraction(el.getAttribute('data-interaction'));
+        if (interaction) {
           document.getElementById('interaction-prompt').classList.add('hidden');
           document.getElementById('crosshair').classList.remove('active');
-        });
 
-        el.addEventListener('click', () => {
-          // CRUCIAL: Don't fire click if player was looking around (Gemini's fix)
-          if (hasDragged || StoryEngine.isDialogueActive() || StoryEngine.isCutsceneActive()) return;
+          // Remove pulse animation from clicked object
+          const targets = el.childElementCount > 0 ? Array.from(el.children) : [el];
+          targets.forEach(child => {
+            if (child.hasAttribute && child.hasAttribute('animation__pulse')) child.removeAttribute('animation__pulse');
+            if (child.setAttribute) child.setAttribute('material', 'opacity', 1);
+          });
 
-          const interaction = InteractionSystem.getInteraction(el.getAttribute('data-interaction'));
-          if (interaction) {
-            document.getElementById('interaction-prompt').classList.add('hidden');
-            document.getElementById('crosshair').classList.remove('active');
-
-            // Remove pulse animation from clicked object
-            const targets = el.childElementCount > 0 ? Array.from(el.children) : [el];
-            targets.forEach(child => {
-              if (child.hasAttribute('animation__pulse')) child.removeAttribute('animation__pulse');
-              child.setAttribute('material', 'opacity', 1);
-            });
-
-            StoryEngine.showDialogue(interaction.dialogue, interaction.onComplete);
-          }
-        });
+          currentHoveredInteractive = null;
+          StoryEngine.showDialogue(interaction.dialogue, interaction.onComplete);
+        }
       });
 
       console.log('[GameEngine] Scene loaded, interactions ready');
