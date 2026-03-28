@@ -36,54 +36,77 @@ These are the core concepts from *Project Hail Mary* that inform the game's worl
 
 ---
 
-## 🏗️ Game Structure (Planned)
+## 🏗️ Game Structure
 
-The game is broken into **acts** that mirror the book's narrative arc. Each act introduces new mechanics, environments, and story beats.
+The game is broken into **phases** that mirror the book's narrative arc. Each phase introduces new mechanics, environments, and story beats.
 
 ### Gameplay Mechanics
 
 - **Dialogue Choices** — The player has choices that affect dialogue, but the main story follows a single narrative arc.
 - **Text-Based Dialogue** — Dialogues are not voice acted; all dialogue is displayed as on-screen text.
 - **3rd-Person Narrator** — A narrator provides third-person perspective to guide the story.
-- **3D Environment** — The game is set in a 3D environment (using Three.js).
-- **Controls** — WASD for movement, E for interaction, Space for jumping.
+- **3D Environment** — The game is set in a 3D environment (using A-Frame, built on Three.js).
+- **Controls** — WASD for movement, Hold Left Click + Drag to look, Click to interact, Space to continue.
 - **Seamless Transitions** — Scene changes (e.g., walking through a door) should feel smooth and cinematic, not abrupt.
+- **Puzzle UIs** — Interactive mini-puzzles overlay the 3D scene (microscope, radar, translation matrix).
 
 
-### Act 1 — Awakening
+### Phase 1 — Awakening ✅ COMPLETE
 - Player wakes up aboard the *Hail Mary* with no memory.
-- Explore the ship, discover the dead crew members.
-- Tutorial mechanics: movement, interaction, reading logs/data.
-- Flashback sequences begin revealing backstory.
-- Player starts to understand the mission and the stakes.
+- Explore the ship, discover the dead crew members (CDR. Yáo, ENG. Ilyukhina).
+- Find personal locker with photo → **Flashback: The Classroom** (Stratt recruits Grace).
+- Read medical monitor (7 years in coma) and ship terminal (Tau Ceti mission).
+- Examining both crew → **Flashback: Launch Day** (with shuttle countdown audio).
+- Ship terminal → **Flashback: The Briefing** (Astrophage explained).
+- Navigate through Corridor to Control Room.
 
+**Rooms:** Med Bay → Corridor → Control Room
 
-### Act 2 — The Mission
-- Player pieces together the Astrophage crisis through ship logs, experiments, and flashbacks.
-- Science-based puzzles (e.g., analyzing Astrophage samples, managing ship systems).
-- Arrive at Tau Ceti.
+### Phase 2 — The Astrophage Revelation ✅ COMPLETE
+- Access the Laboratory from the Control Room.
+- **Microscope Puzzle:** Fire infrared laser at Astrophage sample, observe it absorbing 100% of energy.
+- After analysis, proximity alarm triggers → radar console appears in Control Room.
+- **Radar Puzzle:** Track incoming anomalous object on intercept course.
 
-### Act 3 — First Contact
-- Detect Rocky's ship. Establish communication.
-- Collaborative puzzles that require working with Rocky.
-- Discover Taumoeba.
+**Rooms:** Laboratory (microscope, spectrometer)
 
-### Act 4 — The Choice *(subject to major changes)*
-- Climactic challenges — breeding Taumoeba, sending beetles back to Earth.
-- Final moral choice: return home or help Rocky.
-- Multiple endings based on player decisions.
+### Phase 3 — First Contact ✅ COMPLETE
+- After radar confirmed, airlock unlocks → enter Airlock.
+- Find Xenonite panels → build dividing wall.
+- **Flashback: The Training** (centrifuge, flight sims, EVA training).
+- Rocky appears as silhouette behind Xenonite wall.
+- **Translation Puzzle:** Match Rocky's musical chords to words (ASTROPHAGE, FRIEND, etc.).
+
+**Rooms:** Airlock (with Xenonite wall, Rocky silhouette)
+
+### Phase 4 — Science Bros ✅ COMPLETE
+- After translation, Rocky asks about Grace's family.
+- **Flashback: The Goodbye** — farewell to wife before launch.
+- Discover Taumoeba (organism that eats Astrophage).
+- Objective: Return to Control Room.
+
+### Phase 5 — The Climax & The Choice ✅ COMPLETE
+- Returning to nav console triggers **Hazard Mode** (red alert, pulsing lights).
+- Taumoeba mutation — eating ship fuel AND Xenonite (Rocky's hull).
+- **Final Choice UI:**
+  - **Go Home:** Return to Earth. See wife. Rocky dies.
+  - **Save Rocky:** Turn around. Save friend. Never see Earth again.
+- **Epilogue (Earth):** Sun restored. Grace with wife. Wondering about Rocky.
+- **Epilogue (Rocky):** Teaching alien children on Erid. Rocky says suns are bright again.
 
 > [!IMPORTANT]
-> Acts 3 and 4 are **subject to significant story changes** as the project evolves. The team will define original plot divergences during development.
+> The wife character is a **major divergence from the book** (Grace has no wife in the novel). This is an intentional creative choice to strengthen the final decision's emotional weight.
 
 ---
 
 ## 🛠️ Technical Notes
 
 - **Platform:** Web-based (runs in browser)
-- **Stack:** HTML / CSS / JavaScript + **Three.js** for 3D rendering
+- **Stack:** HTML / CSS / JavaScript + **A-Frame 1.7** (built on Three.js) for 3D rendering
+- **Camera:** Custom `hold-to-look` A-Frame component (js/components.js) — hold left click + drag to orbit
+- **Audio:** MP3 files — beep loop during wakeup, shuttle countdown during crew flashback
+- **Puzzles:** HTML/CSS overlay UIs (microscope, radar, translation, final choice)
 - **Collaboration:** GitHub repo — all code is version-controlled and pushed regularly
-- **Scope:** Focus on delivering a **polished, playable demo** by hackathon deadline
 
 ---
 
@@ -93,44 +116,40 @@ When contributing code to this project:
 
 1. **Read this document first** to understand the game's premise, world, and structure.
 2. **Check existing code** in the repo before creating new files — avoid duplicating work.
-3. **Follow the act structure** above when building scenes or levels.
+3. **Follow the phase structure** above when building scenes or levels.
 4. **Keep it modular** — separate game logic, UI, story/dialogue, and assets into distinct files/folders.
-5. **Prioritize Act 1** — the awakening sequence is the first deliverable.
+5. **Use the A-Frame component pattern** (see js/components.js) for new camera/control features.
 6. **Use semantic HTML and clean CSS** — the game should look polished and feel premium.
 7. **Commit and push frequently** — the team is collaborating via GitHub.
 
-### Suggested File Structure
+### File Structure
 
 ```
 project-hail-mary/
-├── agents.md            # This file — project context
-├── index.html           # Main entry point
+├── agents.md              # This file — project context
+├── updated_plan_info      # Detailed phase-by-phase design document
+├── index.html             # Main entry point (A-Frame scenes + UI overlays + puzzle UIs)
 ├── css/
-│   └── style.css        # Global styles
+│   └── style.css          # Global styles (HUD, dialogue, puzzles, flashbacks, alerts)
 ├── js/
-│   ├── game.js          # Core game engine / loop
-│   ├── story.js         # Dialogue & narrative logic
-│   ├── puzzles.js       # Puzzle / minigame mechanics
-│   └── ui.js            # UI management
-├── assets/
-│   ├── images/          # Sprites, backgrounds, UI elements
-│   └── audio/           # Sound effects, ambient audio
+│   ├── components.js      # A-Frame custom components (hold-to-look)
+│   ├── game.js            # Core game engine / loop / room transitions / puzzle UI helpers
+│   ├── story.js           # Dialogue data, flashbacks, epilogues, typewriter effect
+│   └── interactions.js    # Player interaction definitions, puzzle logic, plot flags
+├── Space Shuttle Launch Countdown.mp3   # Audio: crew flashback
+├── beep_beep_beep_sound_effect_to_be_looped.mp3  # Audio: wakeup sequence
 └── data/
-    ├── dialogue.json    # Story dialogue & branching paths
-    └── config.json      # Game configuration
+    └── (future: dialogue.json, config.json)
 ```
 
 ---
 
 ## ❓ Open Questions
 
-These are decisions the team still needs to make:
-
-- [ ] What specific story changes will diverge from the book?
-- [ ] What is the separate storyline that needs to be coded?
-- [ ] What game engine/framework (if any) beyond vanilla JS?
 - [ ] What is the target play-time for the hackathon demo?
-- [ ] Will there be audio/music, or is this visual-only?
+- [ ] Should additional minigames be added (gravity puzzle, flight sim)?
+- [ ] How to improve Rocky's visual representation?
+- [ ] Should there be more rooms (e.g., engine room, cargo bay)?
 
 > [!NOTE]
 > If you're an agent and have questions about the project direction, flag them clearly in your output so the team can address them.
