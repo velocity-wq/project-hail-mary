@@ -340,6 +340,33 @@ const GameEngine = (() => {
     }
   }
 
+  // ===== EMERGENCY TIMER (Phase 5) =====
+  let emergencyTimerInterval = null;
+
+  function startEmergencyTimer(seconds, callback) {
+    let timerEl = document.getElementById('emergency-timer');
+    if (!timerEl) {
+      timerEl = document.createElement('div');
+      timerEl.id = 'emergency-timer';
+      timerEl.className = 'emergency-timer';
+      document.body.appendChild(timerEl);
+    }
+    timerEl.style.display = 'block';
+    let remaining = seconds;
+    timerEl.textContent = `⚠ ${remaining}s REMAINING`;
+
+    emergencyTimerInterval = setInterval(() => {
+      remaining--;
+      timerEl.textContent = `⚠ ${remaining}s REMAINING`;
+      if (remaining <= 10) timerEl.classList.add('critical');
+      if (remaining <= 0) {
+        clearInterval(emergencyTimerInterval);
+        timerEl.style.display = 'none';
+        if (callback) callback();
+      }
+    }, 1000);
+  }
+
   return {
     init,
     startGame,
@@ -350,6 +377,7 @@ const GameEngine = (() => {
     openPuzzleUI,
     closePuzzleUI,
     toggleHazardMode,
+    startEmergencyTimer,
   };
 })();
 

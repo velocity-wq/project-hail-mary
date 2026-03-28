@@ -51,6 +51,10 @@
         <a-box position="0 0.55 -0.8" width="0.6" height="0.06" depth="0.35" material="color: #404065; roughness: 0.95"></a-box>
       </a-entity>
 
+      <!-- Medical Pen (Gravity puzzle) -->
+      <a-entity id="medical-pen" class="interactive" data-interaction="gravity" position="1.5 0.65 -1">
+        <a-cylinder radius="0.02" height="0.15" rotation="0 0 90" material="color: #8888cc; metalness: 0.6"></a-cylinder>
+      </a-entity>
       <!-- Crew beds -->
       <a-entity id="crew-bed-1" class="interactive" data-interaction="crew1" position="-2.5 0 -2">
         <a-box position="0 0.4 0" width="1.2" height="0.1" depth="2.2" material="color: #2a2a45; roughness: 0.5; metalness: 0.6"></a-box>
@@ -276,6 +280,24 @@
   <div id="flashback-overlay" class="flashback-overlay hidden">
     <div class="flashback-label">◆ MEMORY FRAGMENT ◆</div>
     <div id="flashback-text" class="flashback-text"></div>
+  </div>
+
+  <!-- PUZZLE UI: GRAVITY -->
+  <div id="ui-gravity" class="puzzle-ui hidden">
+    <div class="puzzle-header">GRAVITY ANALYSIS</div>
+    <div class="puzzle-content">
+      <div class="gravity-chamber">
+        <div class="gravity-pen">🖊️</div>
+        <div class="gravity-floor"></div>
+      </div>
+      <div class="puzzle-controls">
+        <p>Drop the pen and time how long it takes to fall.</p>
+        <button id="btn-drop-pen" class="btn-glow">DROP PEN</button>
+        <div id="gravity-timer" class="gravity-timer">0.00s</div>
+        <p id="gravity-result" class="puzzle-result hidden">Expected fall time at 1G: 0.45s. Actual: 0.37s. This is 1.5G! The ship is spinning to create artificial gravity.</p>
+        <button id="btn-close-gravity" class="btn-glow hidden" style="margin-top: 20px;">I UNDERSTAND</button>
+      </div>
+    </div>
   </div>
 
   <!-- PUZZLE UI: MICROSCOPE -->

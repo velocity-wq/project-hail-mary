@@ -1,22 +1,25 @@
 /* ============================================
    INTERACTION SYSTEM
-   Handles player interactions with 3D objects and UI logic
+   Handles player interactions with 3D objects,
+   puzzle UI logic, and game progression flags
    ============================================ */
 
 const InteractionSystem = (() => {
   const interacted = new Set();
-  
+
   // Game state flags for plot progression
   const flags = {
+    gravityChecked: false,
     astrophageAnalyzed: false,
     radarChecked: false,
     wallBuilt: false,
     translated: false,
-    hazardTriggered: false
+    hazardTriggered: false,
+    emergencyComplete: false,
   };
 
   const interactions = {
-    // --- WAKE UP & MED BAY ---
+    // === PHASE 1: MED BAY ===
     crew1: {
       prompt: 'Examine Commander Yáo',
       dialogue: 'crew1',
@@ -33,17 +36,33 @@ const InteractionSystem = (() => {
         checkDiscoveries();
       },
     },
+
+    // Gravity puzzle — pen drop
+    gravity: {
+      prompt: 'Pick up medical pen',
+      dialogue: 'gravity_start',
+      onComplete: () => {
+        if (!flags.gravityChecked) {
+          GameEngine.openPuzzleUI('ui-gravity');
+        }
+      },
+    },
+
+    // Personal locker — photo → classroom flashback
     photo: {
-      prompt: 'Examine personal locker',
+      prompt: 'Open personal locker',
       dialogue: null,
       onComplete: () => {
         interacted.add('photo');
         if (!interacted.has('flashback-classroom')) {
           interacted.add('flashback-classroom');
-          StoryEngine.playFlashback('classroom');
+          StoryEngine.playFlashback('classroom', () => {
+            StoryEngine.showObjective('Explore the med bay. Check the monitors and terminals.');
+          });
         }
-      }
+      },
     },
+
     monitor: {
       prompt: 'Read medical monitor',
       dialogue: 'monitor',
@@ -52,6 +71,7 @@ const InteractionSystem = (() => {
         checkDiscoveries();
       },
     },
+
     terminal: {
       prompt: 'Access ship terminal',
       dialogue: 'terminal',
@@ -62,13 +82,14 @@ const InteractionSystem = (() => {
           interacted.add('flashback-astrophage');
           setTimeout(() => {
             StoryEngine.playFlashback('astrophage', () => {
-              StoryEngine.showObjective('Find the control room');
-              GameEngine.updateMission('INVESTIGATE ASTROPHAGE');
+              StoryEngine.showObjective('Find the control room — head through the door');
+              GameEngine.updateMission('FIND CONTROL ROOM');
             });
           }, 1000);
         }
       },
     },
+
     'door-corridor': {
       prompt: 'Enter corridor',
       dialogue: 'door-corridor',
@@ -79,31 +100,32 @@ const InteractionSystem = (() => {
       dialogue: 'door-control',
       onComplete: () => {
         GameEngine.moveToRoom('control-room');
-        StoryEngine.showObjective('Check the navigation console');
+        StoryEngine.showObjective('Check the navigation console and viewport');
       },
     },
-    
-    // --- CONTROL ROOM ---
+
+    // === PHASE 2: CONTROL ROOM & LAB ===
     viewport: {
       prompt: 'Look through viewport',
       dialogue: 'viewport',
-      onComplete: () => {},
+      onComplete: () => {
+        interacted.add('viewport');
+      },
     },
     'nav-console': {
-      prompt: flags.translated ? 'Access navigation console' : 'Access navigation console',
+      prompt: 'Access navigation console',
       dialogue: 'nav-console',
       onComplete: () => {
+        // After translation + Taumoeba → trigger endgame
         if (!flags.hazardTriggered && flags.translated) {
-          // Triggers endgame if we returned from lab after Taumoeba
           triggerHazardMode();
           return;
         }
 
         if (!interacted.has('nav-console')) {
           interacted.add('nav-console');
-          GameEngine.updateMission('APPROACH TAU CETI');
-          StoryEngine.showObjective('Anomalous object detected — find the Laboratory');
-          // Play flashback 2 (training) shortly after if desired, or skip for now to save time
+          GameEngine.updateMission('INVESTIGATE ASTROPHAGE');
+          StoryEngine.showObjective('Anomalous object detected — find the Laboratory door');
         }
       },
     },
@@ -112,21 +134,21 @@ const InteractionSystem = (() => {
       dialogue: 'door-lab',
       onComplete: () => {
         GameEngine.moveToRoom('laboratory');
-        StoryEngine.showObjective('Analyze the Astrophage sample');
+        StoryEngine.showObjective('Use the microscope to analyze the Astrophage sample');
       },
     },
 
-    // --- LABORATORY ---
+    // === PHASE 2: LABORATORY ===
     microscope: {
-      prompt: 'Use Microscope',
+      prompt: 'Use Microscope & Spectrometer',
       dialogue: 'microscope_intro',
       onComplete: () => {
         if (!flags.astrophageAnalyzed) {
           GameEngine.openPuzzleUI('ui-microscope');
         } else {
-          StoryEngine.showObjective('Head back or continue exploring');
+          StoryEngine.showObjective('Already analyzed. Continue exploring.');
         }
-      }
+      },
     },
     'door-airlock': {
       prompt: 'Enter Airlock',
@@ -134,64 +156,63 @@ const InteractionSystem = (() => {
       onComplete: () => {
         if (flags.radarChecked) {
           GameEngine.moveToRoom('airlock');
-          StoryEngine.showObjective('Find materials to build a divider');
+          StoryEngine.showObjective('Find materials to build a divider wall');
         } else {
           StoryEngine.showObjective('The airlock is sealed. You need a reason to enter.');
         }
-      }
+      },
     },
 
-    // --- ALARM / RADAR ---
+    // === PHASE 3: RADAR & AIRLOCK ===
     radar: {
       prompt: 'Check Proximity Radar',
       dialogue: 'radar_contact',
       onComplete: () => {
         GameEngine.openPuzzleUI('ui-radar');
-      }
+      },
     },
-
-    // --- AIRLOCK ---
     xenonite: {
-      prompt: 'Build Xenonite Divider',
+      prompt: 'Build Xenonite Divider Wall',
       dialogue: 'wall_building',
       onComplete: () => {
         flags.wallBuilt = true;
-        // Make wall visible
         const wall = document.getElementById('xenonite-wall');
         if (wall) wall.setAttribute('visible', 'true');
-        
-        // Hide panels
         const panels = document.getElementById('xenonite-panels');
         if (panels) panels.setAttribute('visible', 'false');
 
-        // Play training flashback 
+        // Training flashback → Rocky appears
         setTimeout(() => {
           StoryEngine.playFlashback('training', () => {
-             // Rocky appears!
-             const rocky = document.getElementById('rocky-silhouette');
-             if (rocky) rocky.setAttribute('visible', 'true');
-             StoryEngine.showDialogue('rocky_arrival', () => {
-               StoryEngine.showObjective('Communicate with the alien');
-             });
+            const rocky = document.getElementById('rocky-silhouette');
+            if (rocky) rocky.setAttribute('visible', 'true');
+            StoryEngine.showDialogue('rocky_arrival', () => {
+              StoryEngine.showObjective('Communicate with the alien — click on the silhouette');
+              GameEngine.updateMission('FIRST CONTACT');
+            });
           });
         }, 1000);
-      }
+      },
     },
+
+    // === PHASE 4: ROCKY ===
     rocky: {
-      prompt: 'Communicate',
-      dialogue: null, // Custom flow
+      prompt: 'Communicate with Rocky',
+      dialogue: null,
       onComplete: () => {
         if (!flags.translated) {
           GameEngine.openPuzzleUI('ui-translation');
         } else {
           StoryEngine.showDialogue('taumoeba_discovery', () => {
-             StoryEngine.showObjective('Return to the control room');
+            StoryEngine.showObjective('Return to the Control Room navigation console');
+            GameEngine.updateMission('SEND CURE TO EARTH');
           });
         }
-      }
-    }
+      },
+    },
   };
 
+  // === DISCOVERY CHECKER ===
   function checkDiscoveries() {
     const arr = ['crew1', 'crew2', 'monitor', 'terminal'];
     const count = arr.filter(k => interacted.has(k)).length;
@@ -199,10 +220,11 @@ const InteractionSystem = (() => {
       interacted.add('door-corridor-hinted');
       setTimeout(() => {
         StoryEngine.showObjective('Head through the door to the corridor');
+        GameEngine.updateMission('EXPLORE THE SHIP');
       }, 2000);
     }
-    
-    // Check crew flashback
+
+    // Crew flashback after examining both bodies
     if (interacted.has('crew1') && interacted.has('crew2') && !interacted.has('flashback-crew')) {
       interacted.add('flashback-crew');
       setTimeout(() => {
@@ -213,38 +235,84 @@ const InteractionSystem = (() => {
     }
   }
 
+  // === PHASE 5: HAZARD MODE ===
   function triggerHazardMode() {
     flags.hazardTriggered = true;
     GameEngine.toggleHazardMode(true);
+    GameEngine.updateMission('EMERGENCY — CONTAIN BREACH');
     StoryEngine.showDialogue('hazard_mode', () => {
-       GameEngine.openPuzzleUI('ui-final-choice');
+      // Timed emergency: player has 30 seconds
+      GameEngine.startEmergencyTimer(30, () => {
+        // Timer complete (or ran out) → proceed to choice
+        flags.emergencyComplete = true;
+        StoryEngine.showDialogue('emergency_complete', () => {
+          GameEngine.openPuzzleUI('ui-final-choice');
+          GameEngine.updateMission('THE FINAL CHOICE');
+        });
+      });
     });
   }
 
-  // --- UI EVENT LISTENERS ---
+  // === UI PUZZLE EVENT LISTENERS ===
   function initUIPuzzles() {
+    // Gravity Puzzle
+    const dropBtn = document.getElementById('btn-drop-pen');
+    if (dropBtn) {
+      dropBtn.addEventListener('click', () => {
+        const penEl = document.querySelector('.gravity-pen');
+        if (penEl) penEl.classList.add('dropped');
+        const timerEl = document.getElementById('gravity-timer');
+        if (timerEl) {
+          let t = 0;
+          const iv = setInterval(() => {
+            t += 0.01;
+            timerEl.textContent = t.toFixed(2) + 's';
+          }, 10);
+          setTimeout(() => {
+            clearInterval(iv);
+            timerEl.textContent = '0.37s';
+            timerEl.classList.add('highlight');
+            document.getElementById('gravity-result').classList.remove('hidden');
+            document.getElementById('btn-close-gravity').classList.remove('hidden');
+          }, 370);
+        }
+      });
+    }
+
+    const closeGravity = document.getElementById('btn-close-gravity');
+    if (closeGravity) {
+      closeGravity.addEventListener('click', () => {
+        GameEngine.closePuzzleUI('ui-gravity');
+        flags.gravityChecked = true;
+        StoryEngine.showDialogue('gravity_result', () => {
+          StoryEngine.showObjective('Check the crew beds and personal locker');
+        });
+      });
+    }
+
     // Microscope
-    document.getElementById('btn-fire-laser').addEventListener('click', () => {
-      document.querySelector('.astrophage-dot').classList.add('lasered');
-      document.getElementById('microscope-result').classList.remove('hidden');
-      document.getElementById('btn-close-microscope').classList.remove('hidden');
+    document.getElementById('btn-fire-laser')?.addEventListener('click', () => {
+      document.querySelector('.astrophage-dot')?.classList.add('lasered');
+      document.getElementById('microscope-result')?.classList.remove('hidden');
+      document.getElementById('btn-close-microscope')?.classList.remove('hidden');
       flags.astrophageAnalyzed = true;
     });
 
-    document.getElementById('btn-close-microscope').addEventListener('click', () => {
+    document.getElementById('btn-close-microscope')?.addEventListener('click', () => {
       GameEngine.closePuzzleUI('ui-microscope');
       StoryEngine.showDialogue('microscope_result', () => {
-        // Trigger Radar alarm over in control room
+        // Trigger Radar alarm
         const radar = document.getElementById('radar-console');
         if (radar) radar.setAttribute('visible', 'true');
         StoryEngine.showDialogue('radar_alert', () => {
-           GameEngine.updateMission('INVESTIGATE ALERT IN CONTROL ROOM');
+          GameEngine.updateMission('INVESTIGATE PROXIMITY ALERT');
+          StoryEngine.showObjective('Return to Control Room — check the radar console');
         });
       });
     });
 
     // Radar
-    document.getElementById('btn-close-radar').addEventListener('click', () => {
+    document.getElementById('btn-close-radar')?.addEventListener('click', () => {
       GameEngine.closePuzzleUI('ui-radar');
       flags.radarChecked = true;
       StoryEngine.showObjective('Head back to the lab, then enter the Airlock');
@@ -252,14 +320,13 @@ const InteractionSystem = (() => {
     });
 
     // Translation
-    const transBtns = document.querySelectorAll('.btn-translate');
-    transBtns.forEach(btn => {
+    document.querySelectorAll('.btn-translate').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const word = e.target.getAttribute('data-word');
         if (word === 'ASTROPHAGE' || word === 'FRIEND') {
           e.target.classList.add('correct');
-          document.getElementById('translation-result').classList.remove('hidden');
-          document.getElementById('btn-close-translation').classList.remove('hidden');
+          document.getElementById('translation-result')?.classList.remove('hidden');
+          document.getElementById('btn-close-translation')?.classList.remove('hidden');
           flags.translated = true;
         } else {
           e.target.classList.add('wrong');
@@ -268,31 +335,29 @@ const InteractionSystem = (() => {
       });
     });
 
-    document.getElementById('btn-close-translation').addEventListener('click', () => {
+    document.getElementById('btn-close-translation')?.addEventListener('click', () => {
       GameEngine.closePuzzleUI('ui-translation');
       StoryEngine.showDialogue('translation_success', () => {
-         StoryEngine.playFlashback('wife', () => {
-            StoryEngine.showDialogue('taumoeba_discovery', () => {
-               StoryEngine.showObjective('Return to the Control Room Navigation Console');
-               GameEngine.updateMission('RETURN TO EARTH');
-            });
-         });
+        StoryEngine.playFlashback('wife', () => {
+          StoryEngine.showDialogue('taumoeba_discovery', () => {
+            StoryEngine.showObjective('Return to the Control Room Navigation Console');
+            GameEngine.updateMission('SEND CURE TO EARTH');
+          });
+        });
       });
     });
 
     // Final Choice
-    document.getElementById('btn-choice-earth').addEventListener('click', () => {
+    document.getElementById('btn-choice-earth')?.addEventListener('click', () => {
       GameEngine.closePuzzleUI('ui-final-choice');
-      StoryEngine.showDialogue('final_choice', () => {
-         StoryEngine.playEpilogue('earth');
-      });
+      GameEngine.toggleHazardMode(false);
+      StoryEngine.playEpilogue('earth');
     });
 
-    document.getElementById('btn-choice-rocky').addEventListener('click', () => {
+    document.getElementById('btn-choice-rocky')?.addEventListener('click', () => {
       GameEngine.closePuzzleUI('ui-final-choice');
-      StoryEngine.showDialogue('final_choice', () => {
-         StoryEngine.playEpilogue('rocky');
-      });
+      GameEngine.toggleHazardMode(false);
+      StoryEngine.playEpilogue('rocky');
     });
   }
 
@@ -303,14 +368,13 @@ const InteractionSystem = (() => {
   function hasInteracted(key) {
     return interacted.has(key);
   }
-  
-  // Wait for DOM to init button listeners
+
   window.addEventListener('DOMContentLoaded', initUIPuzzles);
 
   return {
     getInteraction,
     hasInteracted,
     interacted,
-    flags
+    flags,
   };
 })();
