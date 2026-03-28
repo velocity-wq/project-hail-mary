@@ -51,6 +51,8 @@ const GameEngine = (() => {
       if (StoryEngine.isCutsceneActive()) { StoryEngine.skipCutscene(); return; }
       // If dialogue showing, advance it
       if (StoryEngine.isDialogueActive()) { StoryEngine.advanceDialogue(); return; }
+      // If game not started, start it
+      if (!state.started) { startGame(); return; }
 
       if (!state.inGameWorld || !state.controlsEnabled) return;
 
@@ -107,6 +109,9 @@ const GameEngine = (() => {
     document.addEventListener('keydown', (e) => {
       const key = e.key.toLowerCase();
       if (key in keys) keys[key] = true;
+
+      // FIX: Block keyboard auto-repeat (prevents spacebar spam bug)
+      if (e.repeat) return;
 
       if (e.key === ' ' || e.key === 'Enter') {
         e.preventDefault();
@@ -170,11 +175,6 @@ const GameEngine = (() => {
 
   // ===== INITIALIZATION =====
   function init() {
-    // Click intro screen to start
-    document.getElementById('intro-screen').addEventListener('click', () => {
-      if (!state.started) startGame();
-    });
-
     setupControls();
 
     const scene = document.getElementById('game-scene');
@@ -234,24 +234,17 @@ const GameEngine = (() => {
     console.log('[GameEngine] Initialized');
   }
 
-  // ===== START GAME =====
+  // ===== START GAME (now delegates EVERYTHING to startFullIntro) =====
   function startGame() {
     if (state.started) return;
     state.started = true;
-
-    const intro = document.getElementById('intro-screen');
-    intro.style.transition = 'opacity 1.5s ease';
-    intro.style.opacity = '0';
-
-    setTimeout(() => {
-      intro.classList.remove('active');
-      intro.style.display = 'none';
-      StoryEngine.playWakeupSequence(() => enterGameWorld());
-    }, 1500);
+    // The entire intro + wakeup is now ONE unified async flow
+    StoryEngine.startFullIntro(() => enterGameWorld());
   }
 
   // ===== ENTER 3D WORLD =====
   function enterGameWorld() {
+    if (state.inGameWorld) return; // Guard against double-entry
     state.inGameWorld = true;
     document.body.classList.add('in-game');
 

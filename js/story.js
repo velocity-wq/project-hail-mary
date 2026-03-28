@@ -331,27 +331,39 @@ const StoryEngine = (() => {
     });
   }
 
-  // ===== UNIVERSAL SKIP (Gemini's approach) =====
+  // ===== UNIVERSAL SKIP (instant hide, no waiting for transitions) =====
   function skipCutscene() {
     if (!isInCutscene) return;
     isInCutscene = false;
 
     if (isTyping) skipTypewriter();
     if (wakeupSleepTimer) { clearTimeout(wakeupSleepTimer); wakeupSleepTimer = null; }
-    if (wakeupSkipResolve) { wakeupSkipResolve(); wakeupSkipResolve = null; }
+    if (wakeupSkipResolve) { const resolve = wakeupSkipResolve; wakeupSkipResolve = null; resolve(); }
 
-    const wScreen = document.getElementById('wakeup-screen');
-    if (wScreen.classList.contains('active')) {
-      wScreen.style.transition = 'opacity 0.5s ease';
-      wScreen.style.opacity = '0';
-      setTimeout(() => { wScreen.classList.remove('active'); wScreen.style.opacity = ''; wScreen.style.display = 'none'; }, 500);
+    // Instantly hide intro screen (fixes fade-gap black screen)
+    const intro = document.getElementById('intro-screen');
+    if (intro) {
+      intro.style.transition = 'none';
+      intro.style.opacity = '0';
+      intro.classList.remove('active');
+      intro.style.display = 'none';
     }
 
+    // Instantly hide wakeup screen
+    const wScreen = document.getElementById('wakeup-screen');
+    if (wScreen) {
+      wScreen.style.transition = 'none';
+      wScreen.style.opacity = '0';
+      wScreen.classList.remove('active');
+      wScreen.style.display = 'none';
+    }
+
+    // Instantly hide flashback
     const fScreen = document.getElementById('flashback-overlay');
-    if (!fScreen.classList.contains('hidden')) {
-      fScreen.style.transition = 'opacity 0.5s ease';
+    if (fScreen) {
+      fScreen.style.transition = 'none';
       fScreen.style.opacity = '0';
-      setTimeout(() => { fScreen.classList.add('hidden'); fScreen.style.opacity = ''; }, 500);
+      fScreen.classList.add('hidden');
     }
 
     document.querySelectorAll('.skip-hint').forEach(el => el.classList.add('hidden'));
@@ -404,20 +416,32 @@ const StoryEngine = (() => {
     if (onDialogueComplete) { const cb = onDialogueComplete; onDialogueComplete = null; cb(); }
   }
 
-  // ===== WAKEUP SEQUENCE =====
-  async function playWakeupSequence(callback) {
+  // ===== FULLY INTEGRATED INTRO (intro fade + wakeup as ONE flow) =====
+  async function startFullIntro(callback) {
     cutsceneCallback = callback; isInCutscene = true;
-    const screen = document.getElementById('wakeup-screen');
-    const textEl = document.getElementById('wakeup-text');
-    const overlay = document.getElementById('wakeup-overlay');
-    const skipHint = screen.querySelector('.skip-hint');
 
+    const intro = document.getElementById('intro-screen');
+    const wScreen = document.getElementById('wakeup-screen');
+    const overlay = document.getElementById('wakeup-overlay');
+    const textEl = document.getElementById('wakeup-text');
+    const skipHint = wScreen.querySelector('.skip-hint');
+
+    // Fade out title screen (part of the cutscene now — skippable!)
+    intro.style.transition = 'opacity 1.5s ease';
+    intro.style.opacity = '0';
+    await skippableSleep(1500);
+    if (!isInCutscene) return;
+
+    intro.classList.remove('active');
+    intro.style.display = 'none';
+
+    // Start wakeup black screen
     const beep = document.getElementById('audio-beep');
     if (beep) { beep.volume = 0.5; beep.play().catch(() => {}); }
 
-    screen.style.display = 'flex';
-    void screen.offsetWidth;
-    screen.classList.add('active');
+    wScreen.style.display = 'flex';
+    void wScreen.offsetWidth;
+    wScreen.classList.add('active');
     if (skipHint) skipHint.classList.remove('hidden');
     overlay.style.opacity = '1';
 
@@ -439,11 +463,11 @@ const StoryEngine = (() => {
     await skippableSleep(800);
     if (!isInCutscene) return;
 
-    screen.style.transition = 'opacity 1.5s ease'; screen.style.opacity = '0';
+    wScreen.style.transition = 'opacity 1.5s ease'; wScreen.style.opacity = '0';
     await skippableSleep(1500);
     if (!isInCutscene) return;
 
-    screen.classList.remove('active'); screen.style.display = 'none'; screen.style.opacity = '';
+    wScreen.classList.remove('active'); wScreen.style.display = 'none'; wScreen.style.opacity = '';
     isInCutscene = false;
     if (skipHint) skipHint.classList.add('hidden');
     if (beep) beep.pause();
@@ -529,7 +553,7 @@ const StoryEngine = (() => {
   }
 
   return {
-    showDialogue, advanceDialogue, playWakeupSequence, playFlashback,
+    showDialogue, advanceDialogue, startFullIntro, playFlashback,
     playEpilogue, showObjective, skipCutscene, dialogues,
     isDialogueActive: () => currentDialogue !== null,
     isCutsceneActive: () => isInCutscene,
