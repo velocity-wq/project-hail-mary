@@ -305,25 +305,42 @@ const InteractionSystem = (() => {
     }
 
     // Microscope
-    document.getElementById('btn-fire-laser')?.addEventListener('click', () => {
-      document.querySelector('.astrophage-dot')?.classList.add('lasered');
-      document.getElementById('microscope-result')?.classList.remove('hidden');
-      document.getElementById('btn-close-microscope')?.classList.remove('hidden');
-      flags.astrophageAnalyzed = true;
-    });
+    const fireLaserBtn = document.getElementById('btn-fire-laser');
+    if (fireLaserBtn) {
+      fireLaserBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // Don't let this bubble to document handlers
+        if (fireLaserBtn.disabled) return;
+        fireLaserBtn.disabled = true;
+        fireLaserBtn.style.opacity = '0.5';
+        fireLaserBtn.textContent = 'ANALYZING...';
+        document.querySelector('.astrophage-dot')?.classList.add('lasered');
+        setTimeout(() => {
+          document.getElementById('microscope-result')?.classList.remove('hidden');
+          document.getElementById('btn-close-microscope')?.classList.remove('hidden');
+          fireLaserBtn.classList.add('hidden');
+          flags.astrophageAnalyzed = true;
+        }, 600);
+      });
+    }
 
-    document.getElementById('btn-close-microscope')?.addEventListener('click', () => {
-      GameEngine.closePuzzleUI('ui-microscope');
-      StoryEngine.showDialogue('microscope_result', () => {
-        // Trigger Radar alarm
-        const radar = document.getElementById('radar-console');
-        if (radar) radar.setAttribute('visible', 'true');
-        StoryEngine.showDialogue('radar_alert', () => {
-          GameEngine.updateMission('INVESTIGATE PROXIMITY ALERT');
-          StoryEngine.showObjective('Return to Control Room — check the radar console');
+    const closeMicroscopeBtn = document.getElementById('btn-close-microscope');
+    if (closeMicroscopeBtn) {
+      closeMicroscopeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (closeMicroscopeBtn.disabled) return;
+        closeMicroscopeBtn.disabled = true;
+        GameEngine.closePuzzleUI('ui-microscope');
+        StoryEngine.showDialogue('microscope_result', () => {
+          // Trigger Radar alarm
+          const radar = document.getElementById('radar-console');
+          if (radar) radar.setAttribute('visible', 'true');
+          StoryEngine.showDialogue('radar_alert', () => {
+            GameEngine.updateMission('INVESTIGATE PROXIMITY ALERT');
+            StoryEngine.showObjective('Return to Control Room — check the radar console');
+          });
         });
       });
-    });
+    }
 
     // Radar
     document.getElementById('btn-close-radar')?.addEventListener('click', () => {

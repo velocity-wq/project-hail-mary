@@ -433,8 +433,12 @@ const StoryEngine = (() => {
     await typeText(textEl, line.text, (line.speaker === 'SYSTEM' || line.speaker === 'TERMINAL') ? 15 : 25);
   }
 
+  let dialogueCooldown = false;
   function advanceDialogue() {
+    if (dialogueCooldown) return;
     if (isTyping) { skipTypewriter(); return; }
+    dialogueCooldown = true;
+    setTimeout(() => { dialogueCooldown = false; }, 150);
     currentLineIndex++;
     if (currentLineIndex < currentDialogue.length) showNextLine();
     else closeDialogue();
