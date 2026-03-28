@@ -40,11 +40,23 @@ These are the core concepts from *Project Hail Mary* that inform the game's worl
 
 The game is broken into **acts** that mirror the book's narrative arc. Each act introduces new mechanics, environments, and story beats.
 
+### Gameplay Mechanics
+
+- **Dialogue Choices** — The player has choices that affect dialogue, but the main story follows a single narrative arc.
+- **Text-Based Dialogue** — Dialogues are not voice acted; all dialogue is displayed as on-screen text.
+- **3rd-Person Narrator** — A narrator provides third-person perspective to guide the story.
+- **3D Environment** — The game is set in a 3D environment (using Three.js).
+- **Controls** — WASD for movement, E for interaction, Space for jumping.
+- **Seamless Transitions** — Scene changes (e.g., walking through a door) should feel smooth and cinematic, not abrupt.
+
+
 ### Act 1 — Awakening
 - Player wakes up aboard the *Hail Mary* with no memory.
 - Explore the ship, discover the dead crew members.
 - Tutorial mechanics: movement, interaction, reading logs/data.
 - Flashback sequences begin revealing backstory.
+- Player starts to understand the mission and the stakes.
+
 
 ### Act 2 — The Mission
 - Player pieces together the Astrophage crisis through ship logs, experiments, and flashbacks.
@@ -69,7 +81,7 @@ The game is broken into **acts** that mirror the book's narrative arc. Each act 
 ## 🛠️ Technical Notes
 
 - **Platform:** Web-based (runs in browser)
-- **Stack:** HTML / CSS / JavaScript (lightweight — no heavy engines like Unity WebGL)
+- **Stack:** HTML / CSS / JavaScript + **Three.js** for 3D rendering
 - **Collaboration:** GitHub repo — all code is version-controlled and pushed regularly
 - **Scope:** Focus on delivering a **polished, playable demo** by hackathon deadline
 
