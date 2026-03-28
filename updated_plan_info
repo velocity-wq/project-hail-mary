@@ -1,0 +1,76 @@
+
+
+### **Phase 1: Awakening & The Pitch**
+**Present 3D Environment: The Medical Bay**
+*   **Gameplay:** The player wakes up in first-person view. The screen has a blurry vignette effect (amnesia). The player must click around to unhook themselves from the stasis bed and explore the sterile room, eventually finding the deceased crewmates.
+*   **Puzzle:** Figuring out the ship's gravity. The player picks up an object (like a pen or medical tool) and drops it. An in-game stopwatch UI pops up, showing it falls too fast—they are in $1.5G$.
+*   **Memory Trigger:** The player finds a personal locker. Inside is a tablet or a physical photo. Touching it triggers a high-pitched ringing, and the screen fades to white.
+
+**Flashback 1: The Classroom**
+*   **Scene:** A brightly lit, warm middle school science classroom.
+*   **Gameplay:** You are standing at the teacher's desk. The player can interact with a **framed picture of your family/wife**, establishing your core motivation.
+*   **Cutscene/Dialogue:** Eva Stratt and NASA agents abruptly enter. They dismiss the kids and interrogate Grace about his obscure research paper on waterless alien life. Because the dimming sun threatens his family's future, he agrees to come with them as a consultant.
+
+---
+
+### **Phase 2: The Astrophage Revelation**
+**Present 3D Environment: The Bridge & Laboratory**
+*   **Gameplay:** Armed with your identity, you unlock the ship's doors. On the Bridge, you interact with a console to open the blast shields, revealing a foreign star (Tau Ceti).
+*   **Puzzle:** Moving to the Lab, you trigger a microscope and spectrometer mini-game. The player must manipulate lasers to examine a microscopic black dot (Astrophage) and observe how it absorbs all heat and light.
+*   **Memory Trigger:** Seeing the massive, complex flight console and EVA spacesuits makes Grace realize he was drafted for much more than just "consulting."
+
+**Flashback 2: The NASA Building**
+*   **Scene:** A chaotic, high-tech government briefing room or hangar.
+*   **Cutscene:** Stratt explains the *Hail Mary* mission. She drops the bombshell that Grace has to go on the actual spaceflight.
+*   **Dialogue Options:** The player gets to choose a defiant dialogue option: *"Are you crazy? I need motion sickness pills for a merry-go-round! I put the 'not' in astronaut!"* Stratt coldly insists his expertise is mandatory to save Earth.
+
+---
+
+### **Phase 3: First Contact & Preparation**
+**Present 3D Environment: The Airlock & Cargo Bay**
+*   **Gameplay:** Proximity alarms blare! A radar mini-game requires the player to track an incoming object—the alien ship, *The Blip-A*. 
+*   **Action:** Rocky's ship attaches via a tunnel. The player must gather materials (clear Xenonite panels and sealant) from around the 3D ship to build a transparent, airtight dividing wall in the airlock to safely meet the alien without mixing their toxic atmospheres.
+*   **Memory Trigger:** The intense physical exhaustion of moving heavy panels while wearing a bulky EVA space suit triggers a memory of his physical preparation.
+
+**Flashback 3: Astronaut Training Montage**
+*   **Scene:** NASA Astronaut Training Center.
+*   **Gameplay (Web Minigames):** A sequence of three quick arcade-style games:
+    1.  *The Centrifuge:* A balance game where you must keep your mouse cursor inside a moving "green zone" while the screen spins and shakes to simulate G-force.
+    2.  *Flight Sim:* A frantic steering puzzle where you must fire the correct thrusters to dock a module.
+    3.  *Sample Collection:* Operating a clunky, slow robotic arm to pick up rocks under a strict time limit.
+
+---
+
+### **Phase 4: Science Bros & The Anchor**
+**Present 3D Environment: The Divided Lab**
+*   **Gameplay:** Rocky (the five-legged alien) appears on the other side of the glass. 
+*   **Puzzle (Core Mechanic):** Rocky speaks in musical chords. The player must solve an audio/translation puzzle, matching Rocky's chords to physical items in the room (Light, Heat, Astrophage) to build a translation dictionary in the ship's computer.
+*   **Action:** Working together, you breed *Taumoeba* (the microbe that eats Astrophage) in a 3D test-tube puzzle.
+*   **Memory Trigger:** Through the translation screen, Rocky asks Grace: *"You have mate? You have hatchlings?"* Grace freezes, looking at the photo he brought with him.
+
+**Optional Flashback 4: The Goodbye (The Wife)**
+*   **Scene:** A dimly lit, quiet living room on Earth, the night before he goes into the medical coma for launch.
+*   **Dialogue:** A deeply emotional scene. She begs him not to go. He explains that if he stays, they get a few more years, but Earth freezes and they die in the dark. He is going so she has a future. 
+*   *Narrative Purpose:* This perfectly restores his memory of *why* he is on this suicide mission, giving the player massive motivation to send the cure back to Earth.
+
+---
+
+### **Phase 5: The Climax & The Choice**
+**Present 3D Environment: The Entire Ship (Hazard Mode)**
+*   **Gameplay:** Disaster strikes! The Taumoeba mutates, escapes containment, and starts eating the ship's fuel! Red emergency lights flash. This is a timed sequence where the player must scramble through the 3D rooms to patch microscopic leaks, isolate the surviving Taumoeba, and load them into the "Beetle" probes to shoot back to Earth.
+*   **The Twist:** Earth is saved. However, the player discovers Taumoeba eats Xenonite. Rocky's ship is going to fail, and Rocky will die in deep space.
+
+**The Final Decision (The Bridge)**
+*   **Gameplay:** The player sits at the navigation console. You only have enough fuel to go one way. Two interactive buttons appear:
+    *   **Option A (Go Home):** Set course for Earth. Survive, return to your wife, but Rocky dies.
+    *   **Option B (Save Rocky):** Turn the ship around. You must use your *Flight Sim training* from Flashback 3 to manually intercept Rocky. You save your friend, but you will never see your wife or Earth again.
+
+### **Epilogue**
+*   *(If Option B - the Canon Ending):* A dark, red-lit alien dome on Erid. An older Grace is teaching a classroom of young, spider-like alien children (mirroring Flashback 1 perfectly). He looks at the worn-out picture of his wife on his desk. Rocky tells him Earth's sun is bright again. He smiles. Fade to black.
+
+---
+
+### **💡 Web Game Dev Tips for this Structure:**
+*   **Keep the Scope Tight:** You really only need 4 or 5 main 3D rooms (Medical Bay, Bridge, Lab, Airlock). You can make the game feel huge just by changing the lighting in these rooms (e.g., stark white at the start, warm yellow when Rocky arrives, flashing red during the climax).
+*   **Visual Contrast:** Make the present-day spaceship scenes cool-toned (blues, whites, sterile) and the Earth flashbacks warm-toned (sepia, golden hour, cozy) to clearly differentiate the timelines.
+*   **Animating Rocky:** Rendering and animating a complex 5-legged alien in a browser game might be difficult. You can cleverly obscure Rocky behind slightly frosted/scratched Xenonite glass, representing him mostly through shadowy silhouettes, gestures, and his musical UI popping up on the screen!
