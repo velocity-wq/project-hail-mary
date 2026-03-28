@@ -1,7 +1,9 @@
 /* ============================================
    GAME ENGINE
-   Core game loop, state management,
-   room transitions, and A-Frame integration
+   Core game loop, camera control, state management,
+   room transitions, and A-Frame integration.
+   Uses Gemini's inline camera + hasDragged pattern
+   merged with our full 5-room game.
    ============================================ */
 
 const GameEngine = (() => {
@@ -14,34 +16,13 @@ const GameEngine = (() => {
   };
 
   const roomConfig = {
-    medbay: {
-      position: { x: 0, y: 0, z: 2 },
-      label: 'MED BAY',
-    },
-    corridor: {
-      position: { x: 0, y: 0, z: 8 },
-      label: 'CORRIDOR',
-    },
-    'control-room': {
-      position: { x: 0, y: 0, z: 22 },
-      label: 'CONTROL ROOM',
-    },
-    laboratory: {
-      position: { x: 0, y: 0, z: 36 },
-      label: 'LABORATORY',
-    },
-    airlock: {
-      position: { x: 0, y: 0, z: 50 },
-      label: 'AIRLOCK',
-    },
+    medbay:         { position: { x: 0, y: 0, z: 2 }, label: 'MED BAY' },
+    corridor:       { position: { x: 0, y: 0, z: 8 }, label: 'CORRIDOR' },
+    'control-room': { position: { x: 0, y: 0, z: 22 }, label: 'CONTROL ROOM' },
+    laboratory:     { position: { x: 0, y: 0, z: 36 }, label: 'LABORATORY' },
+    airlock:        { position: { x: 0, y: 0, z: 50 }, label: 'AIRLOCK' },
   };
 
-  // ===== WASD MOVEMENT =====
-  const keys = { w: false, a: false, s: false, d: false };
-  const moveSpeed = 5;
-  let lastFrameTime = 0;
-
-  // Room boundaries
   const roomBounds = {
     medbay:         { minX: -3.3, maxX: 3.3, minZ: -4.3, maxZ: 4.3 },
     corridor:       { minX: -1.2, maxX: 1.2, minZ: 5.0, maxZ: 19.0 },
@@ -50,20 +31,88 @@ const GameEngine = (() => {
     airlock:        { minX: -2.3, maxX: 2.3, minZ: 50.5, maxZ: 57.5 },
   };
 
-  // ===== KEYBOARD SETUP =====
-  function setupKeyboard() {
+  // ===== INLINE CAMERA CONTROL (from Gemini) =====
+  let isLooking = false, hasDragged = false;
+  let cameraYaw = 0, cameraPitch = 0;
+  let lastMouseX = 0, lastMouseY = 0;
+
+  // ===== WASD MOVEMENT =====
+  const keys = { w: false, a: false, s: false, d: false };
+  const moveSpeed = 5;
+  let lastFrameTime = 0, loopRunning = false;
+
+  // ===== UNIFIED MOUSE/KEYBOARD CONTROLS (Gemini pattern) =====
+  function setupControls() {
+    // --- MOUSE DOWN: route to cutscene skip / dialogue advance / look start ---
+    document.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return; // Left click only
+
+      // If cutscene playing, skip it
+      if (StoryEngine.isCutsceneActive()) { StoryEngine.skipCutscene(); return; }
+      // If dialogue showing, advance it
+      if (StoryEngine.isDialogueActive()) { StoryEngine.advanceDialogue(); return; }
+
+      if (!state.inGameWorld || !state.controlsEnabled) return;
+
+      // Don't start looking if clicking on a UI element
+      const isUI = e.target.closest('.puzzle-ui, .dialogue-box, .objective-popup, .btn-glow');
+      if (isUI) return;
+
+      e.preventDefault();
+      isLooking = true; hasDragged = false;
+      lastMouseX = e.clientX; lastMouseY = e.clientY;
+      document.body.classList.add('is-looking');
+    });
+
+    // --- MOUSE UP: stop looking ---
+    document.addEventListener('mouseup', (e) => {
+      if (e.button !== 0) return;
+      isLooking = false;
+      document.body.classList.remove('is-looking');
+    });
+
+    document.addEventListener('mouseleave', () => {
+      isLooking = false;
+      document.body.classList.remove('is-looking');
+    });
+
+    // --- MOUSE MOVE: rotate camera when holding ---
+    document.addEventListener('mousemove', (e) => {
+      if (!isLooking || !state.controlsEnabled) return;
+      const dx = e.clientX - lastMouseX;
+      const dy = e.clientY - lastMouseY;
+
+      // Only count as drag if moved significantly
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) hasDragged = true;
+
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+
+      cameraYaw -= dx * 0.3;
+      cameraPitch -= dy * 0.3;
+      cameraPitch = Math.max(-85, Math.min(85, cameraPitch));
+
+      const camera = document.getElementById('player-camera');
+      if (camera && camera.object3D) {
+        camera.object3D.rotation.order = 'YXZ';
+        camera.object3D.rotation.x = THREE.MathUtils.degToRad(cameraPitch);
+        camera.object3D.rotation.y = THREE.MathUtils.degToRad(cameraYaw);
+      }
+    });
+
+    // Prevent right-click context menu in game
+    document.addEventListener('contextmenu', e => { if (state.inGameWorld) e.preventDefault(); });
+
+    // --- KEYBOARD ---
     document.addEventListener('keydown', (e) => {
       const key = e.key.toLowerCase();
       if (key in keys) keys[key] = true;
 
-      // Space/Enter: advance dialogue OR skip wakeup
       if (e.key === ' ' || e.key === 'Enter') {
         e.preventDefault();
-        if (StoryEngine.isDialogueActive()) {
-          StoryEngine.advanceDialogue();
-        } else if (StoryEngine.isWakeupActive()) {
-          StoryEngine.skipCurrentWakeupStep();
-        }
+        if (StoryEngine.isCutsceneActive()) StoryEngine.skipCutscene();
+        else if (StoryEngine.isDialogueActive()) StoryEngine.advanceDialogue();
+        else if (!state.started) startGame();
       }
     });
 
@@ -73,10 +122,13 @@ const GameEngine = (() => {
     });
   }
 
-  // ===== GAME LOOP (WASD + collision) =====
+  // ===== GAME LOOP =====
   function gameLoop(time) {
     requestAnimationFrame(gameLoop);
-    if (!state.controlsEnabled || !state.inGameWorld) {
+
+    // Lock movement during UI/cutscenes
+    if (!state.controlsEnabled || !state.inGameWorld ||
+        StoryEngine.isDialogueActive() || StoryEngine.isCutsceneActive()) {
       lastFrameTime = time;
       return;
     }
@@ -84,13 +136,10 @@ const GameEngine = (() => {
     const dt = Math.min((time - lastFrameTime) / 1000, 0.1);
     lastFrameTime = time;
 
-    // Get yaw from the hold-to-look component
-    const camera = document.getElementById('player-camera');
-    const holdToLook = camera?.components?.['hold-to-look'];
-    const yaw = holdToLook ? holdToLook.getYaw() : 0;
-    const yawRad = yaw * (Math.PI / 180);
-
+    // Calculate movement direction relative to camera yaw
+    const yawRad = cameraYaw * (Math.PI / 180);
     let moveX = 0, moveZ = 0;
+
     if (keys.w) { moveX -= Math.sin(yawRad); moveZ -= Math.cos(yawRad); }
     if (keys.s) { moveX += Math.sin(yawRad); moveZ += Math.cos(yawRad); }
     if (keys.a) { moveX -= Math.cos(yawRad); moveZ += Math.sin(yawRad); }
@@ -109,6 +158,7 @@ const GameEngine = (() => {
     let newX = pos.x + moveX;
     let newZ = pos.z + moveZ;
 
+    // Clamp to room boundaries
     const bounds = roomBounds[state.currentRoom];
     if (bounds) {
       newX = Math.max(bounds.minX, Math.min(bounds.maxX, newX));
@@ -120,36 +170,66 @@ const GameEngine = (() => {
 
   // ===== INITIALIZATION =====
   function init() {
-    // Start button
-    document.getElementById('btn-start').addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      startGame();
+    // Click intro screen to start
+    document.getElementById('intro-screen').addEventListener('click', () => {
+      if (!state.started) startGame();
     });
 
-    // Dialogue click
-    document.getElementById('dialogue-box').addEventListener('click', (e) => {
-      e.stopPropagation();
-      StoryEngine.advanceDialogue();
-    });
+    setupControls();
 
-    // Wakeup screen click = skip current step
-    document.getElementById('wakeup-screen').addEventListener('click', () => {
-      if (StoryEngine.isWakeupActive()) {
-        StoryEngine.skipCurrentWakeupStep();
-      }
-    });
-
-    // Setup keyboard + interactions
-    setupKeyboard();
-    setupAFrameInteractions();
-
-    // Start game loop when scene ready
     const scene = document.getElementById('game-scene');
-    scene.addEventListener('loaded', () => {
-      requestAnimationFrame(gameLoop);
-      console.log('[GameEngine] Scene loaded, game loop started');
-    });
+
+    function onLoaded() {
+      const camera = document.getElementById('player-camera');
+      // Remove A-Frame's built-in controls that clash with our custom camera
+      camera.removeAttribute('look-controls');
+      camera.removeAttribute('wasd-controls');
+
+      if (!loopRunning) { loopRunning = true; requestAnimationFrame(gameLoop); }
+
+      // Setup A-Frame interactive object handlers
+      document.querySelectorAll('.interactive').forEach(el => {
+        el.addEventListener('mouseenter', () => {
+          if (StoryEngine.isDialogueActive() || StoryEngine.isCutsceneActive()) return;
+          const interaction = InteractionSystem.getInteraction(el.getAttribute('data-interaction'));
+          if (interaction) {
+            document.getElementById('prompt-text').textContent = interaction.prompt;
+            document.getElementById('interaction-prompt').classList.remove('hidden');
+            document.getElementById('crosshair').classList.add('active');
+          }
+        });
+
+        el.addEventListener('mouseleave', () => {
+          document.getElementById('interaction-prompt').classList.add('hidden');
+          document.getElementById('crosshair').classList.remove('active');
+        });
+
+        el.addEventListener('click', () => {
+          // CRUCIAL: Don't fire click if player was looking around (Gemini's fix)
+          if (hasDragged || StoryEngine.isDialogueActive() || StoryEngine.isCutsceneActive()) return;
+
+          const interaction = InteractionSystem.getInteraction(el.getAttribute('data-interaction'));
+          if (interaction) {
+            document.getElementById('interaction-prompt').classList.add('hidden');
+            document.getElementById('crosshair').classList.remove('active');
+
+            // Remove pulse animation from clicked object
+            const targets = el.childElementCount > 0 ? Array.from(el.children) : [el];
+            targets.forEach(child => {
+              if (child.hasAttribute('animation__pulse')) child.removeAttribute('animation__pulse');
+              child.setAttribute('material', 'opacity', 1);
+            });
+
+            StoryEngine.showDialogue(interaction.dialogue, interaction.onComplete);
+          }
+        });
+      });
+
+      console.log('[GameEngine] Scene loaded, interactions ready');
+    }
+
+    if (scene.hasLoaded) onLoaded();
+    else scene.addEventListener('loaded', onLoaded);
 
     console.log('[GameEngine] Initialized');
   }
@@ -159,13 +239,13 @@ const GameEngine = (() => {
     if (state.started) return;
     state.started = true;
 
-    const introScreen = document.getElementById('intro-screen');
-    introScreen.style.transition = 'opacity 1.5s ease';
-    introScreen.style.opacity = '0';
+    const intro = document.getElementById('intro-screen');
+    intro.style.transition = 'opacity 1.5s ease';
+    intro.style.opacity = '0';
 
     setTimeout(() => {
-      introScreen.classList.remove('active');
-      introScreen.style.display = 'none';
+      intro.classList.remove('active');
+      intro.style.display = 'none';
       StoryEngine.playWakeupSequence(() => enterGameWorld());
     }, 1500);
   }
@@ -175,88 +255,31 @@ const GameEngine = (() => {
     state.inGameWorld = true;
     document.body.classList.add('in-game');
 
-    const wakeup = document.getElementById('wakeup-screen');
-    wakeup.classList.remove('active');
-    wakeup.style.display = 'none';
-
-    // Position camera
     document.getElementById('camera-rig').setAttribute('position', '0 0 -1');
 
-    // Show HUD
-    setTimeout(() => {
-      document.getElementById('hud').classList.remove('hidden');
-    }, 500);
+    setTimeout(() => document.getElementById('hud').classList.remove('hidden'), 500);
 
-    // Enable controls + first dialogue
     setTimeout(() => {
-      enableControls();
+      state.controlsEnabled = true;
       updateMission('EXPLORE MED BAY');
 
       StoryEngine.showDialogue('firstLook', () => {
-        StoryEngine.showObjective('Look around the med bay. Hold left-click + drag to look. Walk to glowing objects.');
+        StoryEngine.showObjective('Look around the med bay. Walk to the glowing objects and CLICK them to examine.');
+
+        // Add pulsing glow animation to all interactive objects (Gemini's approach)
+        document.querySelectorAll('.interactive').forEach(el => {
+          const targets = el.childElementCount > 0 ? Array.from(el.children) : [el];
+          targets.forEach(child => {
+            if (['A-BOX', 'A-PLANE', 'A-CYLINDER'].includes(child.tagName)) {
+              let mat = child.getAttribute('material') || {};
+              if (typeof mat === 'string') child.setAttribute('material', mat + '; transparent: true');
+              else child.setAttribute('material', 'transparent', true);
+              child.setAttribute('animation__pulse', 'property: material.opacity; from: 1; to: 0.4; dur: 1000; dir: alternate; loop: true; easing: easeInOutSine');
+            }
+          });
+        });
       });
     }, 1500);
-  }
-
-  // ===== ENABLE/DISABLE CONTROLS =====
-  function enableControls() {
-    state.controlsEnabled = true;
-    // Enable the A-Frame hold-to-look component
-    const camera = document.getElementById('player-camera');
-    camera.setAttribute('hold-to-look', 'enabled', true);
-  }
-
-  function disableControls() {
-    state.controlsEnabled = false;
-    const camera = document.getElementById('player-camera');
-    camera.setAttribute('hold-to-look', 'enabled', false);
-  }
-
-  // ===== A-FRAME INTERACTIONS =====
-  function setupAFrameInteractions() {
-    const scene = document.getElementById('game-scene');
-    scene.addEventListener('loaded', () => {
-      console.log('[GameEngine] Setting up interactions');
-
-      const interactives = document.querySelectorAll('.interactive');
-      interactives.forEach(el => {
-        el.addEventListener('mouseenter', () => {
-          if (StoryEngine.isDialogueActive()) return;
-          const key = el.getAttribute('data-interaction');
-          const interaction = InteractionSystem.getInteraction(key);
-          if (interaction) {
-            showInteractionPrompt(interaction.prompt);
-            document.getElementById('crosshair').classList.add('active');
-          }
-        });
-
-        el.addEventListener('mouseleave', () => {
-          hideInteractionPrompt();
-          document.getElementById('crosshair').classList.remove('active');
-        });
-
-        el.addEventListener('click', () => {
-          if (StoryEngine.isDialogueActive()) return;
-          const key = el.getAttribute('data-interaction');
-          const interaction = InteractionSystem.getInteraction(key);
-          if (interaction) {
-            hideInteractionPrompt();
-            document.getElementById('crosshair').classList.remove('active');
-            StoryEngine.showDialogue(interaction.dialogue, interaction.onComplete);
-          }
-        });
-      });
-    });
-  }
-
-  function showInteractionPrompt(text) {
-    const prompt = document.getElementById('interaction-prompt');
-    document.getElementById('prompt-text').textContent = text;
-    prompt.classList.remove('hidden');
-  }
-
-  function hideInteractionPrompt() {
-    document.getElementById('interaction-prompt').classList.add('hidden');
   }
 
   // ===== ROOM TRANSITIONS =====
@@ -264,17 +287,25 @@ const GameEngine = (() => {
     const config = roomConfig[roomId];
     if (!config) return;
 
-    disableControls();
+    state.controlsEnabled = false;
 
+    // Make target room visible
     const roomEl = document.getElementById(roomId);
     if (roomEl) roomEl.setAttribute('visible', 'true');
 
+    // Screen transition overlay
     const overlay = document.createElement('div');
     overlay.className = 'screen-transition';
     document.body.appendChild(overlay);
     requestAnimationFrame(() => overlay.classList.add('active'));
 
     setTimeout(() => {
+      // Hide previous room (Gemini's optimization)
+      if (state.currentRoom && state.currentRoom !== roomId) {
+        const prevRoom = document.getElementById(state.currentRoom);
+        if (prevRoom) prevRoom.setAttribute('visible', 'false');
+      }
+
       document.getElementById('camera-rig').setAttribute('position',
         `${config.position.x} ${config.position.y} ${config.position.z}`);
       document.getElementById('hud-location-text').textContent = config.label;
@@ -284,7 +315,7 @@ const GameEngine = (() => {
         overlay.classList.remove('active');
         setTimeout(() => {
           overlay.remove();
-          enableControls();
+          state.controlsEnabled = true;
         }, 600);
       }, 500);
     }, 600);
@@ -296,51 +327,46 @@ const GameEngine = (() => {
 
   // ===== PUZZLE UI HELPERS =====
   function openPuzzleUI(uiId) {
-    disableControls();
+    state.controlsEnabled = false;
     document.getElementById(uiId).classList.remove('hidden');
-    // We remove the class 'in-game' slightly so cursor works normal over UI
     document.body.classList.remove('in-game');
   }
 
   function closePuzzleUI(uiId) {
     document.getElementById(uiId).classList.add('hidden');
     document.body.classList.add('in-game');
-    enableControls();
+    state.controlsEnabled = true;
   }
 
+  // ===== HAZARD MODE =====
   function toggleHazardMode(enable) {
     const hazardLight = document.getElementById('hazard-light');
     const globalAmbient = document.getElementById('global-ambient');
-    // Also change HUD
     const hudTop = document.querySelector('.hud-top');
-    
+
     if (enable) {
-      hazardLight.setAttribute('visible', 'true');
-      hazardLight.setAttribute('intensity', '1.0');
-      // Adding pulse animation dynamically
-      hazardLight.setAttribute('animation__hazardpulse', {
-        property: 'intensity',
-        from: 0.5,
-        to: 1.5,
-        dur: 1000,
-        dir: 'alternate',
-        loop: true
-      });
-      globalAmbient.setAttribute('intensity', '0.2');
-      hudTop.style.color = 'var(--red)';
-      document.querySelector('.hud-mission .hud-value').style.color = 'var(--red)';
-      document.querySelector('.hud-mission .hud-value').classList.add('warning-text');
+      if (hazardLight) {
+        hazardLight.setAttribute('visible', 'true');
+        hazardLight.setAttribute('intensity', '1.0');
+        hazardLight.setAttribute('animation__hazardpulse', {
+          property: 'intensity', from: 0.5, to: 1.5,
+          dur: 1000, dir: 'alternate', loop: true,
+        });
+      }
+      if (globalAmbient) globalAmbient.setAttribute('intensity', '0.2');
+      if (hudTop) hudTop.style.color = 'var(--red)';
+      const missionVal = document.querySelector('.hud-mission .hud-value');
+      if (missionVal) { missionVal.style.color = 'var(--red)'; missionVal.classList.add('warning-text'); }
     } else {
-      hazardLight.setAttribute('visible', 'false');
-      hazardLight.removeAttribute('animation__hazardpulse');
-      globalAmbient.setAttribute('intensity', '1.2');
-      hudTop.style.color = '';
-      document.querySelector('.hud-mission .hud-value').classList.remove('warning-text');
-      document.querySelector('.hud-mission .hud-value').style.color = 'var(--orange)';
+      if (hazardLight) { hazardLight.setAttribute('visible', 'false'); hazardLight.removeAttribute('animation__hazardpulse'); }
+      if (globalAmbient) globalAmbient.setAttribute('intensity', '1.2');
+      if (hudTop) hudTop.style.color = '';
+      const missionVal = document.querySelector('.hud-mission .hud-value');
+      if (missionVal) { missionVal.classList.remove('warning-text'); missionVal.style.color = 'var(--orange)'; }
     }
   }
 
-  // ===== EMERGENCY TIMER (Phase 5) =====
+  // ===== EMERGENCY TIMER =====
   let emergencyTimerInterval = null;
 
   function startEmergencyTimer(seconds, callback) {
@@ -368,19 +394,11 @@ const GameEngine = (() => {
   }
 
   return {
-    init,
-    startGame,
-    moveToRoom,
-    updateMission,
-    enableControls,
-    disableControls,
-    openPuzzleUI,
-    closePuzzleUI,
-    toggleHazardMode,
-    startEmergencyTimer,
+    init, startGame, moveToRoom, updateMission,
+    enableControls: () => { state.controlsEnabled = true; },
+    disableControls: () => { state.controlsEnabled = false; },
+    openPuzzleUI, closePuzzleUI, toggleHazardMode, startEmergencyTimer,
   };
 })();
 
-document.addEventListener('DOMContentLoaded', () => {
-  GameEngine.init();
-});
+document.addEventListener('DOMContentLoaded', GameEngine.init);

@@ -1,11 +1,13 @@
 /* ============================================
    STORY ENGINE
    Handles all narrative content, dialogue,
-   typewriter effects, and flashback sequences
+   typewriter effects, flashbacks, and epilogues.
+   Uses Gemini's robust skipCutscene system +
+   our full 5-phase content.
    ============================================ */
 
 const StoryEngine = (() => {
-  // ===== DIALOGUE DATA =====
+  // ===== DIALOGUE DATA (ALL 5 PHASES) =====
   const dialogues = {
     // --- WAKE UP SEQUENCE ---
     wakeup: [
@@ -17,8 +19,6 @@ const StoryEngine = (() => {
       { speaker: '', text: 'There\'s a beeping sound. Steady. Rhythmic. Medical.' },
       { speaker: '', text: 'I need to get up. I need to figure out where I am.' },
     ],
-
-    // --- FIRST LOOK AROUND ---
     firstLook: [
       { speaker: 'RYLAND', text: 'Okay... I\'m in some kind of medical bay. The room is dimly lit — emergency lighting, maybe?' },
       { speaker: 'RYLAND', text: 'There are two other beds. They\'re not empty.' },
@@ -47,15 +47,12 @@ const StoryEngine = (() => {
       { speaker: 'RYLAND', text: 'Commander. So this is a mission of some kind.' },
       { speaker: 'RYLAND', text: 'I don\'t remember them. I don\'t remember anything.' },
     ],
-
     crew2: [
       { speaker: 'RYLAND', text: 'Another body. "ENG. OLESYA ILYUKHINA"' },
       { speaker: 'RYLAND', text: 'An engineer. Russian, judging by the name.' },
       { speaker: 'RYLAND', text: 'Two crew members dead. And me — alive. Why just me?' },
       { speaker: 'RYLAND', text: 'Something went wrong. Very wrong.' },
     ],
-
-    // --- MEDICAL MONITOR ---
     monitor: [
       { speaker: 'SYSTEM', text: '> COMA RECOVERY PROTOCOL — COMPLETE' },
       { speaker: 'SYSTEM', text: '> PATIENT: GRACE, RYLAND — VITALS NOMINAL' },
@@ -63,8 +60,6 @@ const StoryEngine = (() => {
       { speaker: 'RYLAND', text: '2,592 days?! That\'s... over seven years.' },
       { speaker: 'RYLAND', text: 'Seven years in a coma. On a spaceship. What the hell happened to me?' },
     ],
-
-    // --- SHIP LOG TERMINAL ---
     terminal: [
       { speaker: 'TERMINAL', text: '> HAIL MARY — MISSION LOG' },
       { speaker: 'TERMINAL', text: '> STATUS: EN ROUTE TO TAU CETI SYSTEM' },
@@ -75,26 +70,22 @@ const StoryEngine = (() => {
       { speaker: 'RYLAND', text: 'I need to get to the control room. There has to be more information there.' },
     ],
 
-    // --- DOOR TO CORRIDOR ---
+    // --- DOORS ---
     'door-corridor': [
       { speaker: 'RYLAND', text: 'The corridor. It stretches ahead, dimly lit. The ship hums with a low vibration.' },
       { speaker: 'RYLAND', text: 'The control room should be at the other end.' },
     ],
-
-    // --- CORRIDOR DOOR TO CONTROL ROOM ---
     'door-control': [
       { speaker: 'RYLAND', text: 'The control room. This is where I\'ll find answers.' },
     ],
 
-    // --- CONTROL ROOM: VIEWPORT ---
+    // --- CONTROL ROOM ---
     viewport: [
       { speaker: 'RYLAND', text: 'Stars. Endless, unblinking stars.' },
       { speaker: 'RYLAND', text: 'No Earth. No Sun. Nothing I recognize.' },
       { speaker: 'RYLAND', text: 'I\'m really out here. Alone. Impossibly far from home.' },
       { speaker: 'RYLAND', text: 'But... somewhere in those stars is the answer to saving everything I left behind.' },
     ],
-
-    // --- NAVIGATION CONSOLE ---
     'nav-console': [
       { speaker: 'SYSTEM', text: '> NAVIGATION — TAU CETI APPROACH' },
       { speaker: 'SYSTEM', text: '> ETA: 14 DAYS, 7 HOURS' },
@@ -105,7 +96,7 @@ const StoryEngine = (() => {
       { speaker: 'RYLAND', text: 'I need to remember. I need to figure out what Astrophage is.' },
     ],
 
-    // --- PHASE 2: LABORATORY & ASTROPHAGE ---
+    // --- PHASE 2: LABORATORY ---
     'door-lab': [
       { speaker: 'RYLAND', text: 'This looks like a fully equipped laboratory. The equipment here is bleeding edge.' },
       { speaker: 'RYLAND', text: 'If I\'m a scientist, this is my domain.' },
@@ -120,7 +111,7 @@ const StoryEngine = (() => {
       { speaker: 'RYLAND', text: 'And I\'m supposed to stop it.' },
     ],
 
-    // --- PHASE 3: THE BLIP-A ---
+    // --- PHASE 3: FIRST CONTACT ---
     radar_alert: [
       { speaker: 'SYSTEM', text: '> PROXIMITY ALERT. PROXIMITY ALERT.' },
       { speaker: 'RYLAND', text: 'What is that alarm? A proximity alert?' },
@@ -163,7 +154,7 @@ const StoryEngine = (() => {
       { speaker: 'RYLAND', text: 'I have to send it back to Earth on the Beetles.' },
     ],
 
-    // --- PHASE 5: THE CLIMAX ---
+    // --- PHASE 5: CLIMAX ---
     hazard_mode: [
       { speaker: 'SYSTEM', text: '> CRITICAL ALERT: CONTAINMENT BREACH DETECTED IN MAIN TANKS' },
       { speaker: 'SYSTEM', text: '> TAUMOEBA MUTATION DETECTED — XENONITE CONSUMPTION ACTIVE' },
@@ -293,69 +284,86 @@ const StoryEngine = (() => {
       { text: '"Both suns," Grace smiles.' },
       { text: 'He never saw Earth again. He never saw her again.' },
       { text: 'But he saved two worlds. And found a home among the stars.' },
-    ]
+    ],
   };
 
-  // ===== STATE =====
-  let currentDialogue = null;
-  let currentLineIndex = 0;
-  let isTyping = false;
-  let typeTimer = null;
-  let onDialogueComplete = null;
+  // ===== STATE (Gemini's cleaner pattern) =====
+  let currentDialogue = null, currentLineIndex = 0, onDialogueComplete = null;
+  let isTyping = false, typeTimer = null, typeResolve = null;
+  let currentTextElement = null, currentFullText = '';
+  let cutsceneCallback = null, isInCutscene = false;
+  let wakeupSkipResolve = null, wakeupSleepTimer = null;
 
-  // Wakeup skip state
-  let wakeupSkipResolve = null;
-  let isInWakeup = false;
-  let wakeupSleepTimer = null;
-
-  // ===== TYPEWRITER EFFECT =====
+  // ===== TYPEWRITER (Gemini's robust version) =====
   function typeText(element, text, speed = 25) {
     return new Promise((resolve) => {
-      let i = 0;
-      element.textContent = '';
-      isTyping = true;
+      typeResolve = resolve;
+      currentTextElement = element;
+      currentFullText = text;
+      let i = 0; element.textContent = ''; isTyping = true;
 
       function type() {
+        if (!isTyping) return;
         if (i < text.length) {
-          element.textContent += text[i];
-          i++;
+          element.textContent += text[i]; i++;
           typeTimer = setTimeout(type, speed);
         } else {
-          isTyping = false;
-          resolve();
+          isTyping = false; typeResolve = null; resolve();
         }
       }
       type();
     });
   }
 
-  function skipTypewriter(element, text) {
+  function skipTypewriter() {
+    if (!isTyping) return;
     clearTimeout(typeTimer);
-    element.textContent = text;
     isTyping = false;
+    if (currentTextElement) currentTextElement.textContent = currentFullText;
+    if (typeResolve) { typeResolve(); typeResolve = null; }
   }
 
-  // ===== SKIPPABLE SLEEP (for wakeup/flashback) =====
+  // ===== SKIPPABLE SLEEP =====
   function skippableSleep(ms) {
     return new Promise((resolve) => {
-      wakeupSleepTimer = setTimeout(resolve, ms);
       wakeupSkipResolve = resolve;
+      wakeupSleepTimer = setTimeout(() => { wakeupSkipResolve = null; resolve(); }, ms);
     });
   }
 
-  function skipCurrentWakeupStep() {
-    if (isTyping) {
-      clearTimeout(typeTimer);
-      isTyping = false;
+  // ===== UNIVERSAL SKIP (Gemini's approach) =====
+  function skipCutscene() {
+    if (!isInCutscene) return;
+    isInCutscene = false;
+
+    if (isTyping) skipTypewriter();
+    if (wakeupSleepTimer) { clearTimeout(wakeupSleepTimer); wakeupSleepTimer = null; }
+    if (wakeupSkipResolve) { wakeupSkipResolve(); wakeupSkipResolve = null; }
+
+    const wScreen = document.getElementById('wakeup-screen');
+    if (wScreen.classList.contains('active')) {
+      wScreen.style.transition = 'opacity 0.5s ease';
+      wScreen.style.opacity = '0';
+      setTimeout(() => { wScreen.classList.remove('active'); wScreen.style.opacity = ''; wScreen.style.display = 'none'; }, 500);
     }
-    if (wakeupSleepTimer) {
-      clearTimeout(wakeupSleepTimer);
-      wakeupSleepTimer = null;
+
+    const fScreen = document.getElementById('flashback-overlay');
+    if (!fScreen.classList.contains('hidden')) {
+      fScreen.style.transition = 'opacity 0.5s ease';
+      fScreen.style.opacity = '0';
+      setTimeout(() => { fScreen.classList.add('hidden'); fScreen.style.opacity = ''; }, 500);
     }
-    if (wakeupSkipResolve) {
-      const resolve = wakeupSkipResolve;
-      wakeupSkipResolve = null;
-      resolve();
+
+    document.querySelectorAll('.skip-hint').forEach(el => el.classList.add('hidden'));
+
+    // Stop audio
+    const beep = document.getElementById('audio-beep');
+    if (beep) beep.pause();
+    const launch = document.getElementById('audio-launch');
+    if (launch) launch.pause();
+
+    if (cutsceneCallback) {
+      const cb = cutsceneCallback; cutsceneCallback = null; cb();
     }
   }
 
@@ -363,155 +371,118 @@ const StoryEngine = (() => {
   function showDialogue(dialogueKey, callback) {
     const lines = dialogues[dialogueKey];
     if (!lines) { if (callback) callback(); return; }
-
-    currentDialogue = lines;
-    currentLineIndex = 0;
-    onDialogueComplete = callback || null;
-
-    const box = document.getElementById('dialogue-box');
-    box.classList.remove('hidden');
-
+    currentDialogue = lines; currentLineIndex = 0; onDialogueComplete = callback || null;
+    document.getElementById('dialogue-box').classList.remove('hidden');
     showNextLine();
   }
 
   async function showNextLine() {
-    if (!currentDialogue || currentLineIndex >= currentDialogue.length) {
-      closeDialogue();
-      return;
-    }
-
+    if (!currentDialogue || currentLineIndex >= currentDialogue.length) { closeDialogue(); return; }
     const line = currentDialogue[currentLineIndex];
     const speakerEl = document.getElementById('dialogue-speaker');
     const textEl = document.getElementById('dialogue-text');
 
     speakerEl.textContent = line.speaker;
+    if (line.speaker === 'SYSTEM' || line.speaker === 'TERMINAL') speakerEl.style.color = '#00ff66';
+    else if (line.speaker === 'RYLAND') speakerEl.style.color = '#00f0ff';
+    else if (line.speaker === 'ROCKY') speakerEl.style.color = '#ff8800';
+    else speakerEl.style.color = '#8888aa';
 
-    // Color code speakers
-    if (line.speaker === 'SYSTEM' || line.speaker === 'TERMINAL') {
-      speakerEl.style.color = '#00ff66';
-    } else if (line.speaker === 'RYLAND') {
-      speakerEl.style.color = '#00f0ff';
-    } else if (line.speaker === 'ROCKY') {
-      speakerEl.style.color = '#ff8800';
-    } else {
-      speakerEl.style.color = '#8888aa';
-    }
-
-    await typeText(textEl, line.text, line.speaker === 'SYSTEM' || line.speaker === 'TERMINAL' ? 15 : 25);
+    await typeText(textEl, line.text, (line.speaker === 'SYSTEM' || line.speaker === 'TERMINAL') ? 15 : 25);
   }
 
   function advanceDialogue() {
-    if (isTyping) {
-      const line = currentDialogue[currentLineIndex];
-      const textEl = document.getElementById('dialogue-text');
-      skipTypewriter(textEl, line.text);
-      return;
-    }
-
+    if (isTyping) { skipTypewriter(); return; }
     currentLineIndex++;
-    if (currentLineIndex < currentDialogue.length) {
-      showNextLine();
-    } else {
-      closeDialogue();
-    }
+    if (currentLineIndex < currentDialogue.length) showNextLine();
+    else closeDialogue();
   }
 
   function closeDialogue() {
-    const box = document.getElementById('dialogue-box');
-    box.classList.add('hidden');
-    currentDialogue = null;
-    currentLineIndex = 0;
-
-    if (onDialogueComplete) {
-      const cb = onDialogueComplete;
-      onDialogueComplete = null;
-      cb();
-    }
+    document.getElementById('dialogue-box').classList.add('hidden');
+    currentDialogue = null; currentLineIndex = 0;
+    if (onDialogueComplete) { const cb = onDialogueComplete; onDialogueComplete = null; cb(); }
   }
 
-  // ===== WAKE UP SEQUENCE (skippable) =====
+  // ===== WAKEUP SEQUENCE =====
   async function playWakeupSequence(callback) {
+    cutsceneCallback = callback; isInCutscene = true;
     const screen = document.getElementById('wakeup-screen');
     const textEl = document.getElementById('wakeup-text');
     const overlay = document.getElementById('wakeup-overlay');
-    const skipHint = document.getElementById('skip-hint');
+    const skipHint = screen.querySelector('.skip-hint');
 
     const beep = document.getElementById('audio-beep');
-    if (beep) {
-      beep.volume = 0.5;
-      beep.play().catch(() => {});
-    }
+    if (beep) { beep.volume = 0.5; beep.play().catch(() => {}); }
 
+    screen.style.display = 'flex';
+    void screen.offsetWidth;
     screen.classList.add('active');
-    isInWakeup = true;
     if (skipHint) skipHint.classList.remove('hidden');
     overlay.style.opacity = '1';
 
     await skippableSleep(1000);
-    overlay.style.opacity = '0.8';
-    textEl.classList.add('visible');
+    if (!isInCutscene) return;
 
+    overlay.style.opacity = '0.8'; textEl.classList.add('visible');
     const thoughts = dialogues.wakeup;
+
     for (let i = 0; i < thoughts.length; i++) {
-      if (!isInWakeup) break;
       textEl.textContent = '';
       await typeText(textEl, thoughts[i].text, 40);
+      if (!isInCutscene) return;
       await skippableSleep(1500);
-
-      const progress = (i + 1) / thoughts.length;
-      overlay.style.opacity = String(0.8 - (progress * 0.8));
+      if (!isInCutscene) return;
+      overlay.style.opacity = String(0.8 - (((i + 1) / thoughts.length) * 0.8));
     }
 
     await skippableSleep(800);
-    screen.style.transition = 'opacity 1.5s ease';
-    screen.style.opacity = '0';
+    if (!isInCutscene) return;
+
+    screen.style.transition = 'opacity 1.5s ease'; screen.style.opacity = '0';
     await skippableSleep(1500);
-    screen.classList.remove('active');
-    screen.style.opacity = '';
-    isInWakeup = false;
+    if (!isInCutscene) return;
+
+    screen.classList.remove('active'); screen.style.display = 'none'; screen.style.opacity = '';
+    isInCutscene = false;
     if (skipHint) skipHint.classList.add('hidden');
     if (beep) beep.pause();
-    if (callback) callback();
+    if (cutsceneCallback) { const cb = cutsceneCallback; cutsceneCallback = null; cb(); }
   }
 
-  function skipWakeup() {
-    if (!isInWakeup) return;
-    isInWakeup = false;
-    skipCurrentWakeupStep();
-  }
-
-  // ===== FLASHBACK (skippable) =====
+  // ===== FLASHBACK =====
   async function playFlashback(flashbackKey, callback) {
     const data = flashbacks[flashbackKey];
     if (!data) { if (callback) callback(); return; }
 
+    cutsceneCallback = callback; isInCutscene = true;
     const overlay = document.getElementById('flashback-overlay');
     const textEl = document.getElementById('flashback-text');
-    const labelEl = overlay.querySelector('.flashback-label');
+    overlay.querySelector('.flashback-label').textContent = `◆ ${data.title} ◆`;
 
     const launchAudio = document.getElementById('audio-launch');
     if (flashbackKey === 'crew' && launchAudio) {
-      launchAudio.volume = 1.0;
-      launchAudio.currentTime = 0;
+      launchAudio.volume = 1.0; launchAudio.currentTime = 0;
       launchAudio.play().catch(() => {});
     }
 
-    labelEl.textContent = `◆ ${data.title} ◆`;
     overlay.classList.remove('hidden');
-    isInWakeup = true;
 
     for (let i = 0; i < data.lines.length; i++) {
-      if (!isInWakeup) break;
       textEl.textContent = '';
       await typeText(textEl, data.lines[i], 30);
+      if (!isInCutscene) return;
       await skippableSleep(2000);
+      if (!isInCutscene) return;
     }
 
     await skippableSleep(1000);
-    isInWakeup = false;
+    if (!isInCutscene) return;
+
+    isInCutscene = false;
     if (flashbackKey === 'crew' && launchAudio) launchAudio.pause();
     overlay.classList.add('hidden');
-    if (callback) callback();
+    if (cutsceneCallback) { const cb = cutsceneCallback; cutsceneCallback = null; cb(); }
   }
 
   // ===== EPILOGUE =====
@@ -519,22 +490,17 @@ const StoryEngine = (() => {
     const data = epilogues[endingId];
     if (!data) return;
 
+    document.getElementById('hud').style.display = 'none';
+    document.getElementById('dialogue-box').classList.add('hidden');
+
     const screen = document.getElementById('epilogue-screen');
     const textEl = document.getElementById('epilogue-text');
 
-    // Hide HUD
-    document.getElementById('hud').style.display = 'none';
-    // Hide dialogue box
-    document.getElementById('dialogue-box').classList.add('hidden');
-
-    // Show epilogue - needs .active class per our CSS fix
     screen.classList.remove('hidden');
     screen.classList.add('active');
     screen.style.display = 'flex';
 
-    setTimeout(() => {
-      textEl.classList.add('visible');
-    }, 100);
+    setTimeout(() => textEl.classList.add('visible'), 100);
 
     textEl.innerHTML = '';
     for (let i = 0; i < data.length; i++) {
@@ -544,56 +510,28 @@ const StoryEngine = (() => {
       textEl.appendChild(p);
     }
 
-    await sleep(data.length * 2500 + 5000);
+    await new Promise(r => setTimeout(r, data.length * 2500 + 5000));
 
     const reload = document.createElement('p');
-    reload.textContent = "Thank you for playing Project Hail Mary.";
-    reload.style.animationDelay = "1s";
-    reload.style.color = "var(--cyan)";
-    reload.style.marginTop = "3rem";
+    reload.textContent = 'Thank you for playing Project Hail Mary.';
+    reload.style.animationDelay = '1s';
+    reload.style.color = 'var(--cyan)';
+    reload.style.marginTop = '3rem';
     textEl.appendChild(reload);
-
-    const refresh = document.createElement('p');
-    refresh.textContent = "Refresh to play again.";
-    refresh.style.animationDelay = "2s";
-    refresh.style.color = "#888";
-    refresh.style.marginTop = "1rem";
-    textEl.appendChild(refresh);
   }
 
   // ===== OBJECTIVE =====
   function showObjective(text) {
     const popup = document.getElementById('objective-popup');
-    const textEl = document.getElementById('objective-text');
-    textEl.textContent = text;
+    document.getElementById('objective-text').textContent = text;
     popup.classList.remove('hidden');
     setTimeout(() => popup.classList.add('hidden'), 5000);
   }
 
-  // ===== UTILITY =====
-  function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  function isDialogueActive() {
-    return currentDialogue !== null;
-  }
-
-  function isWakeupActive() {
-    return isInWakeup;
-  }
-
   return {
-    showDialogue,
-    advanceDialogue,
-    playWakeupSequence,
-    playFlashback,
-    playEpilogue,
-    showObjective,
-    isDialogueActive,
-    isWakeupActive,
-    skipCurrentWakeupStep,
-    skipWakeup,
-    dialogues,
+    showDialogue, advanceDialogue, playWakeupSequence, playFlashback,
+    playEpilogue, showObjective, skipCutscene, dialogues,
+    isDialogueActive: () => currentDialogue !== null,
+    isCutsceneActive: () => isInCutscene,
   };
 })();

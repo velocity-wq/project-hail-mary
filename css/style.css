@@ -47,10 +47,16 @@ body {
   background: var(--bg-deep);
   color: var(--text-primary);
   font-family: var(--font-body);
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 body.in-game {
   cursor: crosshair;
+}
+
+body.is-looking {
+  cursor: grabbing !important;
 }
 
 /* --- SCREENS --- */
@@ -1108,3 +1114,11 @@ a-scene .a-enter-vr {
   25% { transform: translateX(-5px); }
   75% { transform: translateX(5px); }
 }
+
+/* ============================================
+   A-FRAME CANVAS OVERRIDES
+   Prevent canvas from stealing cursors
+   ============================================ */
+a-scene { position: fixed !important; inset: 0 !important; z-index: 0 !important; }
+.a-canvas { z-index: 0 !important; cursor: inherit !important; outline: none !important; }
+a-scene .a-enter-vr { display: none !important; }

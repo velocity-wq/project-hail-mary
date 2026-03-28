@@ -6,7 +6,6 @@
   <meta name="description" content="Project Hail Mary — An interactive 3D space adventure game">
   <title>Project Hail Mary — Awakening</title>
   <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
-  <script src="js/components.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -23,13 +22,10 @@
 
     <a-entity id="camera-rig" position="0 0 0">
       <a-entity id="player-camera" camera
-        hold-to-look="enabled: false"
         position="0 1.6 0">
         <a-entity cursor="fuse: false; rayOrigin: mouse"
           raycaster="far: 5; objects: .interactive"
-          position="0 0 -1"
-          geometry="primitive: ring; radiusInner: 0.008; radiusOuter: 0.012"
-          material="color: #00f0ff; shader: flat; opacity: 0.6"></a-entity>
+          position="0 0 0"></a-entity>
       </a-entity>
     </a-entity>
 
