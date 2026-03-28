@@ -331,6 +331,19 @@ const StoryEngine = (() => {
     });
   }
 
+  // ===== AUDIO FADE UTILITY =====
+  function fadeAudio(audio, fromVol, toVol, duration) {
+    const steps = 30;
+    const stepTime = duration / steps;
+    const volStep = (toVol - fromVol) / steps;
+    let current = 0;
+    const interval = setInterval(() => {
+      current++;
+      audio.volume = Math.max(0, Math.min(1, fromVol + volStep * current));
+      if (current >= steps) clearInterval(interval);
+    }, stepTime);
+  }
+
   // ===== UNIVERSAL SKIP (instant hide, no waiting for transitions) =====
   function skipCutscene() {
     if (!isInCutscene) return;
@@ -368,9 +381,17 @@ const StoryEngine = (() => {
 
     document.querySelectorAll('.skip-hint').forEach(el => el.classList.add('hidden'));
 
-    // Stop audio
+    // Fade bg music to ambient level
+    const bgMusic = document.getElementById('audio-bg-music');
+    if (bgMusic) {
+      if (bgMusic.paused) { bgMusic.volume = 0.7; bgMusic.play().catch(() => {}); }
+      fadeAudio(bgMusic, bgMusic.volume, 0.15, 2000);
+    }
+
+    // Start beep in med bay
     const beep = document.getElementById('audio-beep');
-    if (beep) beep.pause();
+    if (beep) { beep.volume = 0.3; beep.play().catch(() => {}); }
+
     const launch = document.getElementById('audio-launch');
     if (launch) launch.pause();
 
@@ -426,6 +447,10 @@ const StoryEngine = (() => {
     const textEl = document.getElementById('wakeup-text');
     const skipHint = wScreen.querySelector('.skip-hint');
 
+    // Start background music at full volume during intro
+    const bgMusic = document.getElementById('audio-bg-music');
+    if (bgMusic) { bgMusic.volume = 0.7; bgMusic.play().catch(() => {}); }
+
     // Fade out title screen (part of the cutscene now — skippable!)
     intro.style.transition = 'opacity 1.5s ease';
     intro.style.opacity = '0';
@@ -435,10 +460,7 @@ const StoryEngine = (() => {
     intro.classList.remove('active');
     intro.style.display = 'none';
 
-    // Start wakeup black screen
-    const beep = document.getElementById('audio-beep');
-    if (beep) { beep.volume = 0.5; beep.play().catch(() => {}); }
-
+    // Start wakeup black screen (NO beep here — beep plays after game loads)
     wScreen.style.display = 'flex';
     void wScreen.offsetWidth;
     wScreen.classList.add('active');
@@ -470,7 +492,14 @@ const StoryEngine = (() => {
     wScreen.classList.remove('active'); wScreen.style.display = 'none'; wScreen.style.opacity = '';
     isInCutscene = false;
     if (skipHint) skipHint.classList.add('hidden');
-    if (beep) beep.pause();
+
+    // Fade background music down to ambient level when entering game world
+    if (bgMusic) fadeAudio(bgMusic, bgMusic.volume, 0.15, 3000);
+
+    // Now start the beep in the med bay
+    const beep = document.getElementById('audio-beep');
+    if (beep) { beep.volume = 0.3; beep.play().catch(() => {}); }
+
     if (cutsceneCallback) { const cb = cutsceneCallback; cutsceneCallback = null; cb(); }
   }
 

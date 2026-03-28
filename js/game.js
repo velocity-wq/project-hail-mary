@@ -38,8 +38,11 @@ const GameEngine = (() => {
 
   // ===== WASD MOVEMENT =====
   const keys = { w: false, a: false, s: false, d: false };
-  const moveSpeed = 5;
+  const walkSpeed = 5, sprintSpeed = 10;
   let lastFrameTime = 0, loopRunning = false;
+  let isSprinting = false, stamina = 100;
+  const staminaDrain = 30, staminaRegen = 20;
+  let flashlightOn = false;
 
   // ===== UNIFIED MOUSE/KEYBOARD CONTROLS (Gemini pattern) =====
   function setupControls() {
@@ -109,6 +112,8 @@ const GameEngine = (() => {
     document.addEventListener('keydown', (e) => {
       const key = e.key.toLowerCase();
       if (key in keys) keys[key] = true;
+      if (e.key === 'Shift') isSprinting = true;
+      if (key === 'g' && state.inGameWorld) toggleFlashlight();
 
       // FIX: Block keyboard auto-repeat (prevents spacebar spam bug)
       if (e.repeat) return;
@@ -124,6 +129,7 @@ const GameEngine = (() => {
     document.addEventListener('keyup', (e) => {
       const key = e.key.toLowerCase();
       if (key in keys) keys[key] = false;
+      if (e.key === 'Shift') isSprinting = false;
     });
   }
 
@@ -141,7 +147,12 @@ const GameEngine = (() => {
     const dt = Math.min((time - lastFrameTime) / 1000, 0.1);
     lastFrameTime = time;
 
-    // Calculate movement direction relative to camera yaw
+    const isMoving = keys.w || keys.a || keys.s || keys.d;
+    const canSprint = isSprinting && stamina > 0 && isMoving;
+    const currentSpeed = canSprint ? sprintSpeed : walkSpeed;
+    stamina = canSprint ? Math.max(0, stamina - staminaDrain * dt) : Math.min(100, stamina + staminaRegen * dt);
+    updateStaminaBar();
+
     const yawRad = cameraYaw * (Math.PI / 180);
     let moveX = 0, moveZ = 0;
 
@@ -153,8 +164,8 @@ const GameEngine = (() => {
     const len = Math.sqrt(moveX * moveX + moveZ * moveZ);
     if (len === 0) return;
 
-    moveX = (moveX / len) * moveSpeed * dt;
-    moveZ = (moveZ / len) * moveSpeed * dt;
+    moveX = (moveX / len) * currentSpeed * dt;
+    moveZ = (moveZ / len) * currentSpeed * dt;
 
     const cameraRig = document.getElementById('camera-rig');
     if (!cameraRig) return;
@@ -396,6 +407,26 @@ const GameEngine = (() => {
         if (callback) callback();
       }
     }, 1000);
+  }
+
+  function toggleFlashlight() {
+    flashlightOn = !flashlightOn;
+    const light = document.getElementById('flashlight');
+    if (light) light.setAttribute('visible', flashlightOn);
+    const indicator = document.getElementById('flashlight-indicator');
+    if (indicator) {
+      indicator.classList.toggle('active', flashlightOn);
+      indicator.querySelector('.flashlight-status').textContent = flashlightOn ? 'ON' : 'OFF';
+    }
+  }
+
+  function updateStaminaBar() {
+    const fill = document.getElementById('stamina-fill');
+    if (!fill) return;
+    fill.style.width = stamina + '%';
+    if (stamina > 50) fill.style.background = 'linear-gradient(90deg, #00ff66, #00cc55)';
+    else if (stamina > 20) fill.style.background = 'linear-gradient(90deg, #ffaa00, #ff8800)';
+    else fill.style.background = 'linear-gradient(90deg, #ff4444, #cc2222)';
   }
 
   return {

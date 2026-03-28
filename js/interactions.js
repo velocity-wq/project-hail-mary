@@ -255,6 +255,10 @@ const InteractionSystem = (() => {
 
   // === UI PUZZLE EVENT LISTENERS ===
   function initUIPuzzles() {
+    // Prevent document mousedown from stealing puzzle button clicks
+    document.querySelectorAll('.puzzle-ui .btn-glow, .puzzle-ui .btn-choice, .puzzle-ui .btn-translate').forEach(btn => {
+      btn.addEventListener('mousedown', (e) => e.stopPropagation());
+    });
     // Gravity Puzzle
     const dropBtn = document.getElementById('btn-drop-pen');
     if (dropBtn) {
