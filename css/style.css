@@ -67,6 +67,10 @@ body.in-game {
   display: flex;
 }
 
+.screen.hidden {
+  display: none !important;
+}
+
 /* ============================================
    INTRO / TITLE SCREEN
    ============================================ */
@@ -972,7 +976,7 @@ a-scene .a-enter-vr {
 .rocky-choice:hover h3 { color: var(--green); }
 
 /* --- EPILOGUE --- */
-#epilogue-screen {
+#epilogue-screen.active {
   background: #000;
   z-index: 300;
   display: flex;
