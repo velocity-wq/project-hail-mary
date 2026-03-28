@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Project Hail Mary — An interactive 3D space adventure game">
+  <title>Project Hail Mary — Awakening</title>
+  <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- A-Frame 3D Scene (MUST be direct child of body) -->
+  <a-scene id="game-scene"
+    vr-mode-ui="enabled: false"
+    loading-screen="enabled: false"
+    fog="type: exponential; color: #0a0a12; density: 0.003"
+    renderer="antialias: true; colorManagement: true">
+
+    <a-entity id="camera-rig" position="0 0 0">
+      <a-entity id="player-camera" camera
+        look-controls="enabled: false"
+        wasd-controls="enabled: false"
+        position="0 1.6 0">
+        <a-entity cursor="fuse: false; rayOrigin: mouse"
+          raycaster="far: 5; objects: .interactive"
+          position="0 0 -1"
+          geometry="primitive: ring; radiusInner: 0.008; radiusOuter: 0.012"
+          material="color: #00f0ff; shader: flat; opacity: 0.6"></a-entity>
+      </a-entity>
+    </a-entity>
+
+    <!-- MED BAY -->
+    <a-entity id="medbay" position="0 0 0">
+      <a-plane position="0 0 0" rotation="-90 0 0" width="8" height="10" material="color: #141428; roughness: 0.8; metalness: 0.2; side: double"></a-plane>
+      <a-plane position="0 3.2 0" rotation="90 0 0" width="8" height="10" material="color: #0f0f20; roughness: 0.9; side: double"></a-plane>
+      <a-plane position="0 1.6 -5" width="8" height="3.2" material="color: #1a1a30; roughness: 0.7; metalness: 0.3; side: double"></a-plane>
+      <a-plane position="-2.5 1.6 5" width="3" height="3.2" material="color: #1a1a30; roughness: 0.7; metalness: 0.3; side: double"></a-plane>
+      <a-plane position="2.5 1.6 5" width="3" height="3.2" material="color: #1a1a30; roughness: 0.7; metalness: 0.3; side: double"></a-plane>
+      <a-plane position="0 2.85 5" width="2" height="0.7" material="color: #1a1a30; roughness: 0.7; metalness: 0.3; side: double"></a-plane>
+      <a-plane position="-4 1.6 0" rotation="0 90 0" width="10" height="3.2" material="color: #1e1e35; roughness: 0.7; metalness: 0.3; side: double"></a-plane>
+      <a-plane position="4 1.6 0" rotation="0 -90 0" width="10" height="3.2" material="color: #1e1e35; roughness: 0.7; metalness: 0.3; side: double"></a-plane>
+
+      <!-- Medical Bed -->
+      <a-entity id="med-bed" position="0 0 -2">
+        <a-box position="0 0.4 0" width="1.2" height="0.1" depth="2.2" material="color: #2a2a45; roughness: 0.5; metalness: 0.6"></a-box>
+        <a-box position="0 0.5 0" width="1.1" height="0.08" depth="2.1" material="color: #353555; roughness: 0.9"></a-box>
+        <a-box position="0 0.55 -0.8" width="0.6" height="0.06" depth="0.35" material="color: #404065; roughness: 0.95"></a-box>
+      </a-entity>
+
+      <!-- Crew beds -->
+      <a-entity id="crew-bed-1" class="interactive" data-interaction="crew1" position="-2.5 0 -2">
+        <a-box position="0 0.4 0" width="1.2" height="0.1" depth="2.2" material="color: #2a2a45; roughness: 0.5; metalness: 0.6"></a-box>
+        <a-box position="0 0.5 0" width="1.1" height="0.08" depth="2.1" material="color: #353555; roughness: 0.9"></a-box>
+        <a-box position="0 0.7 0" width="0.7" height="0.3" depth="1.6" material="color: #2d2d48; roughness: 0.95"></a-box>
+      </a-entity>
+      <a-entity id="crew-bed-2" class="interactive" data-interaction="crew2" position="2.5 0 -2">
+        <a-box position="0 0.4 0" width="1.2" height="0.1" depth="2.2" material="color: #2a2a45; roughness: 0.5; metalness: 0.6"></a-box>
+        <a-box position="0 0.5 0" width="1.1" height="0.08" depth="2.1" material="color: #353555; roughness: 0.9"></a-box>
+        <a-box position="0 0.7 0" width="0.7" height="0.3" depth="1.6" material="color: #2d2d48; roughness: 0.95"></a-box>
+      </a-entity>
+
+      <!-- Medical Monitor -->
+      <a-entity id="med-monitor" class="interactive" data-interaction="monitor" position="-3.5 1.5 -3">
+        <a-box position="0 0 0" width="0.8" height="0.6" depth="0.05" material="color: #0a0a18; roughness: 0.3; metalness: 0.7"></a-box>
+        <a-plane position="0 0 0.03" width="0.7" height="0.5" material="color: #00f0ff; shader: flat; opacity: 0.4"></a-plane>
+        <a-cylinder position="0 -0.5 0" radius="0.03" height="0.6" material="color: #3a3a55; metalness: 0.8"></a-cylinder>
+      </a-entity>
+
+      <!-- Ship Log Terminal -->
+      <a-entity id="log-terminal" class="interactive" data-interaction="terminal" position="3.5 1 -4">
+        <a-box position="0 0 0" width="0.6" height="0.5" depth="0.4" material="color: #1a1a2e; roughness: 0.4; metalness: 0.6"></a-box>
+        <a-plane position="0 0.1 0.21" width="0.5" height="0.3" material="color: #00ff66; shader: flat; opacity: 0.3"></a-plane>
+        <a-box position="0 -0.2 0.3" width="0.5" height="0.03" depth="0.2" rotation="-15 0 0" material="color: #252540; roughness: 0.5; metalness: 0.5"></a-box>
+      </a-entity>
+
+      <!-- Door -->
+      <a-entity id="medbay-door" class="interactive" data-interaction="door-corridor" position="0 0 5">
+        <a-box position="-1.1 1.6 0" width="0.2" height="3.2" depth="0.3" material="color: #2a2a45; metalness: 0.7"></a-box>
+        <a-box position="1.1 1.6 0" width="0.2" height="3.2" depth="0.3" material="color: #2a2a45; metalness: 0.7"></a-box>
+        <a-box position="0 3 0" width="2.4" height="0.4" depth="0.3" material="color: #2a2a45; metalness: 0.7"></a-box>
+        <a-text value="MED BAY" position="0 2.9 0.16" align="center" width="2" color="#00f0ff" font="mozillavr" opacity="0.7"></a-text>
+      </a-entity>
+
+      <!-- Lighting -->
+      <a-light type="point" position="0 3 0" color="#6a6aaa" intensity="2.5" distance="20"></a-light>
+      <a-light type="point" position="-3.5 2.8 -4" color="#ff2244" intensity="1.5" distance="12"></a-light>
+      <a-light type="point" position="3.5 2.8 4" color="#ff2244" intensity="1.2" distance="12"></a-light>
+      <a-light type="point" position="-3.5 1.5 -2.8" color="#00f0ff" intensity="2.0" distance="10"></a-light>
+      <a-light type="point" position="3.5 1 -3.7" color="#00ff66" intensity="1.5" distance="8"></a-light>
+      <a-light type="ambient" color="#2a2a5a" intensity="1.0"></a-light>
+      <a-box position="0 3.15 -2" width="0.15" height="0.05" depth="4" material="color: #4488ff; shader: flat; opacity: 0.8"></a-box>
+      <a-box position="0 3.15 2" width="0.15" height="0.05" depth="4" material="color: #4488ff; shader: flat; opacity: 0.8"></a-box>
+    </a-entity>
+
+    <!-- CORRIDOR -->
+    <a-entity id="corridor" position="0 0 12" visible="false">
+      <a-plane position="0 0 0" rotation="-90 0 0" width="3" height="14" material="color: #141428; side: double"></a-plane>
+      <a-plane position="0 3.2 0" rotation="90 0 0" width="3" height="14" material="color: #0f0f20; side: double"></a-plane>
+      <a-plane position="-1.5 1.6 0" rotation="0 90 0" width="14" height="3.2" material="color: #1a1a30; side: double"></a-plane>
+      <a-plane position="1.5 1.6 0" rotation="0 -90 0" width="14" height="3.2" material="color: #1e1e35; side: double"></a-plane>
+      <a-light type="point" position="0 2.8 0" color="#3a4a8a" intensity="0.8" distance="12"></a-light>
+      <a-entity id="door-control" class="interactive" data-interaction="door-control" position="0 0 7">
+        <a-box position="-1.1 1.6 0" width="0.2" height="3.2" depth="0.3" material="color: #2a2a45; metalness: 0.7"></a-box>
+        <a-box position="1.1 1.6 0" width="0.2" height="3.2" depth="0.3" material="color: #2a2a45; metalness: 0.7"></a-box>
+        <a-box position="0 3 0" width="2.4" height="0.4" depth="0.3" material="color: #2a2a45; metalness: 0.7"></a-box>
+        <a-text value="CONTROL ROOM" position="0 2.9 0.16" align="center" width="1.8" color="#ff8800" font="mozillavr" opacity="0.7"></a-text>
+      </a-entity>
+    </a-entity>
+
+    <!-- CONTROL ROOM -->
+    <a-entity id="control-room" position="0 0 26" visible="false">
+      <a-plane position="0 0 0" rotation="-90 0 0" width="10" height="10" material="color: #141428; side: double"></a-plane>
+      <a-plane position="0 3.5 0" rotation="90 0 0" width="10" height="10" material="color: #0f0f20; side: double"></a-plane>
+      <a-plane position="0 1.75 -5" width="10" height="3.5" material="color: #1a1a30; side: double"></a-plane>
+      <a-plane position="-5 1.75 0" rotation="0 90 0" width="10" height="3.5" material="color: #1e1e35; side: double"></a-plane>
+      <a-plane position="5 1.75 0" rotation="0 -90 0" width="10" height="3.5" material="color: #1e1e35; side: double"></a-plane>
+      <a-plane position="-3 1.75 5" width="4" height="3.5" material="color: #1a1a30; side: double"></a-plane>
+      <a-plane position="3 1.75 5" width="4" height="3.5" material="color: #1a1a30; side: double"></a-plane>
+      <a-plane id="viewport" class="interactive" data-interaction="viewport" position="0 2 -4.95" width="6" height="2.5" material="color: #000008; shader: flat"></a-plane>
+      <a-entity id="nav-console" class="interactive" data-interaction="nav-console" position="0 0.9 -3.5">
+        <a-box position="0 0 0" width="3" height="0.15" depth="1" rotation="-20 0 0" material="color: #1e1e35; roughness: 0.4; metalness: 0.6"></a-box>
+        <a-plane position="-0.8 0.15 -0.1" width="0.6" height="0.4" rotation="-20 0 0" material="color: #00ff44; shader: flat; opacity: 0.3"></a-plane>
+        <a-plane position="0.8 0.15 -0.1" width="0.6" height="0.4" rotation="-20 0 0" material="color: #ff4444; shader: flat; opacity: 0.3"></a-plane>
+        <a-plane position="0 0.15 -0.1" width="0.6" height="0.4" rotation="-20 0 0" material="color: #00f0ff; shader: flat; opacity: 0.3"></a-plane>
+      </a-entity>
+      <a-light type="point" position="0 3.2 0" color="#3a4a8a" intensity="1.0" distance="15"></a-light>
+      <a-light type="point" position="0 1.2 -3.5" color="#00f0ff" intensity="0.8" distance="8"></a-light>
+    </a-entity>
+
+    <a-light type="ambient" color="#252550" intensity="1.2"></a-light>
+  </a-scene>
+
+  <!-- INTRO SCREEN (layered on top of A-Frame) -->
+  <div id="intro-screen" class="screen active">
+    <div class="intro-stars"></div>
+    <div class="intro-content">
+      <div class="intro-subtitle">ANDY WEIR'S</div>
+      <h1 class="intro-title">PROJECT<br>HAIL MARY</h1>
+      <div class="intro-tagline">The last hope for humanity drifts among the stars.</div>
+      <button id="btn-start" class="btn-glow"><span>WAKE UP</span></button>
+      <div class="intro-hint">Click to begin your mission</div>
+    </div>
+    <div class="intro-vignette"></div>
+  </div>
+
+  <!-- WAKE UP SEQUENCE -->
+  <div id="wakeup-screen" class="screen">
+    <div id="wakeup-text" class="wakeup-text"></div>
+    <div id="wakeup-overlay" class="wakeup-overlay"></div>
+    <div id="skip-hint" class="skip-hint hidden">PRESS SPACE OR CLICK TO SKIP ▸▸</div>
+  </div>
+
+  <!-- HUD OVERLAY (non-interactive display elements) -->
+  <div id="hud" class="hud hidden">
+    <div class="hud-top">
+      <div class="hud-location"><span class="hud-icon">◈</span><span id="hud-location-text">MED BAY</span></div>
+      <div class="hud-mission"><span class="hud-label">MISSION STATUS</span><span id="hud-mission-text" class="hud-value">UNKNOWN</span></div>
+    </div>
+    <div id="interaction-prompt" class="interaction-prompt hidden">
+      <div class="prompt-key">CLICK</div><div id="prompt-text" class="prompt-text">Examine</div>
+    </div>
+    <div id="crosshair" class="crosshair"><div class="crosshair-inner"></div></div>
+    <div class="hud-bottom">
+      <div class="hud-controls"><span>WASD</span> Move &nbsp;|&nbsp; <span>HOLD CLICK</span> Look &nbsp;|&nbsp; <span>CLICK</span> Interact &nbsp;|&nbsp; <span>SPACE</span> Continue</div>
+    </div>
+  </div>
+
+  <!-- DIALOGUE BOX (separate from HUD so pointer-events work) -->
+  <div id="dialogue-box" class="dialogue-box hidden">
+    <div class="dialogue-header"><span id="dialogue-speaker" class="dialogue-speaker"></span><span class="dialogue-skip">CLICK TO CONTINUE ▸</span></div>
+    <div id="dialogue-text" class="dialogue-text"></div>
+  </div>
+
+  <!-- OBJECTIVE POPUP -->
+  <div id="objective-popup" class="objective-popup hidden">
+    <div class="objective-label">NEW OBJECTIVE</div><div id="objective-text" class="objective-text"></div>
+  </div>
+
+  <!-- FLASHBACK OVERLAY -->
+  <div id="flashback-overlay" class="flashback-overlay hidden">
+    <div class="flashback-label">◆ MEMORY FRAGMENT ◆</div>
+    <div id="flashback-text" class="flashback-text"></div>
+  </div>
+
+  <script src="js/story.js"></script>
+  <script src="js/interactions.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
