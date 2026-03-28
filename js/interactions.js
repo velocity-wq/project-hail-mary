@@ -51,7 +51,7 @@ const InteractionSystem = (() => {
     // Personal locker — photo → classroom flashback
     photo: {
       prompt: 'Open personal locker',
-      dialogue: null,
+      dialogue: 'photo',
       onComplete: () => {
         interacted.add('photo');
         if (!interacted.has('flashback-classroom')) {
@@ -136,6 +136,16 @@ const InteractionSystem = (() => {
         GameEngine.moveToRoom('laboratory');
         StoryEngine.showObjective('Use the microscope to analyze the Astrophage sample');
       },
+    },
+    'door-back-control': {
+      prompt: 'Return to Control Room',
+      dialogue: null,
+      onComplete: () => GameEngine.moveToRoom('control-room'),
+    },
+    'door-back-lab': {
+      prompt: 'Return to Laboratory',
+      dialogue: null,
+      onComplete: () => GameEngine.moveToRoom('laboratory'),
     },
 
     // === PHASE 2: LABORATORY ===

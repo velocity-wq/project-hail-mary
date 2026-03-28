@@ -45,10 +45,14 @@ const GameEngine = (() => {
   let flashlightOn = false;
 
   // ===== UNIFIED MOUSE/KEYBOARD CONTROLS (Gemini pattern) =====
-  function setupControls() {
+   function setupControls() {
     // --- MOUSE DOWN: route to cutscene skip / dialogue advance / look start ---
     document.addEventListener('mousedown', (e) => {
       if (e.button !== 0) return; // Left click only
+
+      // ALWAYS let puzzle UI buttons handle their own clicks
+      const isPuzzle = e.target.closest('.puzzle-ui');
+      if (isPuzzle) return;
 
       // If cutscene playing, skip it
       if (StoryEngine.isCutsceneActive()) { StoryEngine.skipCutscene(); return; }
@@ -59,8 +63,8 @@ const GameEngine = (() => {
 
       if (!state.inGameWorld || !state.controlsEnabled) return;
 
-      // Don't start looking if clicking on a UI element
-      const isUI = e.target.closest('.puzzle-ui, .dialogue-box, .objective-popup, .btn-glow');
+      // Don't start looking if clicking on a HUD/UI button
+      const isUI = e.target.closest('.dialogue-box, .objective-popup, .btn-glow, #flashlight-indicator');
       if (isUI) return;
 
       e.preventDefault();
@@ -199,7 +203,7 @@ const GameEngine = (() => {
       if (!loopRunning) { loopRunning = true; requestAnimationFrame(gameLoop); }
 
       // Setup interaction detection using cursor events (handles child mesh hits)
-      const cursorEl = document.querySelector('[cursor]');
+      const cursorEl = document.querySelector('[raycaster]');
       let currentHoveredInteractive = null;
 
       cursorEl.addEventListener('raycaster-intersection', (evt) => {
@@ -225,9 +229,12 @@ const GameEngine = (() => {
         document.getElementById('crosshair').classList.remove('active');
       });
 
-      // Click handler — uses whatever the crosshair is currently pointing at
-      document.querySelector('.a-canvas').addEventListener('click', () => {
+      // Click handler — fire interaction on mouseup if NOT dragged
+      // This must use mouseup (not canvas click) because canvas click can be eaten by pointer events
+      document.addEventListener('mouseup', (e) => {
+        if (e.button !== 0) return;
         if (hasDragged || !currentHoveredInteractive) return;
+        if (!state.inGameWorld || !state.controlsEnabled) return;
         if (StoryEngine.isDialogueActive() || StoryEngine.isCutsceneActive()) return;
 
         const el = currentHoveredInteractive;
@@ -240,7 +247,6 @@ const GameEngine = (() => {
           const targets = el.childElementCount > 0 ? Array.from(el.children) : [el];
           targets.forEach(child => {
             if (child.hasAttribute && child.hasAttribute('animation__pulse')) child.removeAttribute('animation__pulse');
-            if (child.setAttribute) child.setAttribute('material', 'opacity', 1);
           });
 
           currentHoveredInteractive = null;
@@ -412,7 +418,31 @@ const GameEngine = (() => {
   function toggleFlashlight() {
     flashlightOn = !flashlightOn;
     const light = document.getElementById('flashlight');
-    if (light) light.setAttribute('visible', flashlightOn);
+    if (light) {
+      light.setAttribute('visible', flashlightOn);
+      if (flashlightOn) {
+        light.setAttribute('intensity', '4.0');
+        light.setAttribute('angle', '50');
+        light.setAttribute('distance', '40');
+      }
+    }
+    // Also toggle a helper point light for wider illumination
+    let helper = document.getElementById('flashlight-helper');
+    if (!helper && flashlightOn) {
+      const cam = document.getElementById('player-camera');
+      if (cam) {
+        helper = document.createElement('a-light');
+        helper.id = 'flashlight-helper';
+        helper.setAttribute('type', 'point');
+        helper.setAttribute('color', '#ffffdd');
+        helper.setAttribute('intensity', '1.5');
+        helper.setAttribute('distance', '20');
+        helper.setAttribute('position', '0 0 0');
+        cam.appendChild(helper);
+      }
+    } else if (helper) {
+      helper.setAttribute('visible', flashlightOn);
+    }
     const indicator = document.getElementById('flashlight-indicator');
     if (indicator) {
       indicator.classList.toggle('active', flashlightOn);

@@ -23,7 +23,7 @@
 
     <a-entity id="camera-rig" position="0 0 0">
       <a-entity id="player-camera" camera position="0 1.6 0">
-        <a-entity cursor="fuse: false" raycaster="far: 50; objects: .interactive, .interactive *"
+        <a-entity raycaster="far: 50; objects: .interactive, .interactive *; autoRefresh: true"
           position="0 0 0"></a-entity>
         <!-- Flashlight -->
         <a-light id="flashlight" type="spot" color="#ffffcc" intensity="2.5" distance="30" angle="35" penumbra="0.4" decay="1.5" position="0 -0.1 0" target="#flashlight-target" visible="false"></a-light>
@@ -137,14 +137,80 @@
     <!-- CORRIDOR -->
     <a-entity id="corridor" position="0 0 12" visible="false">
       <a-plane position="0 0 0" rotation="-90 0 0" width="3" height="14"
-        material="color: #141428; side: double"></a-plane>
+        material="color: #181830; side: double"></a-plane>
       <a-plane position="0 3.2 0" rotation="90 0 0" width="3" height="14"
-        material="color: #0f0f20; side: double"></a-plane>
-      <a-plane position="-1.5 1.6 0" rotation="0 90 0" width="14" height="3.2"
-        material="color: #1a1a30; side: double"></a-plane>
-      <a-plane position="1.5 1.6 0" rotation="0 -90 0" width="14" height="3.2"
-        material="color: #1e1e35; side: double"></a-plane>
-      <a-light type="point" position="0 2.8 0" color="#3a4a8a" intensity="0.8" distance="12"></a-light>
+        material="color: #121225; side: double"></a-plane>
+
+      <!-- Left wall: split for space windows -->
+      <a-plane position="-1.5 0.4 0" rotation="0 90 0" width="14" height="0.8" material="color: #1a1a30; side: double"></a-plane>
+      <a-plane position="-1.5 2.95 0" rotation="0 90 0" width="14" height="0.5" material="color: #1a1a30; side: double"></a-plane>
+      <a-plane position="-1.5 1.6 -6" rotation="0 90 0" width="2" height="1.9" material="color: #1a1a30; side: double"></a-plane>
+      <a-plane position="-1.5 1.6 0" rotation="0 90 0" width="2" height="1.9" material="color: #1a1a30; side: double"></a-plane>
+      <a-plane position="-1.5 1.6 6" rotation="0 90 0" width="2" height="1.9" material="color: #1a1a30; side: double"></a-plane>
+      <!-- Left windows (transparent glass) -->
+      <a-plane position="-1.48 1.6 -3" rotation="0 90 0" width="4" height="1.9"
+        material="color: #061020; shader: flat; opacity: 0.1; transparent: true; side: double"></a-plane>
+      <a-plane position="-1.48 1.6 3" rotation="0 90 0" width="4" height="1.9"
+        material="color: #061020; shader: flat; opacity: 0.1; transparent: true; side: double"></a-plane>
+      <!-- Window frames left -->
+      <a-box position="-1.49 0.65 -3" rotation="0 90 0" width="4" height="0.06" depth="0.04" material="color: #4488cc; metalness: 0.9"></a-box>
+      <a-box position="-1.49 2.55 -3" rotation="0 90 0" width="4" height="0.06" depth="0.04" material="color: #4488cc; metalness: 0.9"></a-box>
+      <a-box position="-1.49 0.65 3" rotation="0 90 0" width="4" height="0.06" depth="0.04" material="color: #4488cc; metalness: 0.9"></a-box>
+      <a-box position="-1.49 2.55 3" rotation="0 90 0" width="4" height="0.06" depth="0.04" material="color: #4488cc; metalness: 0.9"></a-box>
+
+      <!-- Right wall: split for space windows -->
+      <a-plane position="1.5 0.4 0" rotation="0 -90 0" width="14" height="0.8" material="color: #1e1e35; side: double"></a-plane>
+      <a-plane position="1.5 2.95 0" rotation="0 -90 0" width="14" height="0.5" material="color: #1e1e35; side: double"></a-plane>
+      <a-plane position="1.5 1.6 -6" rotation="0 -90 0" width="2" height="1.9" material="color: #1e1e35; side: double"></a-plane>
+      <a-plane position="1.5 1.6 0" rotation="0 -90 0" width="2" height="1.9" material="color: #1e1e35; side: double"></a-plane>
+      <a-plane position="1.5 1.6 6" rotation="0 -90 0" width="2" height="1.9" material="color: #1e1e35; side: double"></a-plane>
+      <!-- Right windows -->
+      <a-plane position="1.48 1.6 -3" rotation="0 -90 0" width="4" height="1.9"
+        material="color: #061020; shader: flat; opacity: 0.1; transparent: true; side: double"></a-plane>
+      <a-plane position="1.48 1.6 3" rotation="0 -90 0" width="4" height="1.9"
+        material="color: #061020; shader: flat; opacity: 0.1; transparent: true; side: double"></a-plane>
+      <!-- Window frames right -->
+      <a-box position="1.49 0.65 -3" rotation="0 -90 0" width="4" height="0.06" depth="0.04" material="color: #4488cc; metalness: 0.9"></a-box>
+      <a-box position="1.49 2.55 -3" rotation="0 -90 0" width="4" height="0.06" depth="0.04" material="color: #4488cc; metalness: 0.9"></a-box>
+      <a-box position="1.49 0.65 3" rotation="0 -90 0" width="4" height="0.06" depth="0.04" material="color: #4488cc; metalness: 0.9"></a-box>
+      <a-box position="1.49 2.55 3" rotation="0 -90 0" width="4" height="0.06" depth="0.04" material="color: #4488cc; metalness: 0.9"></a-box>
+
+      <!-- Starfield visible through corridor windows -->
+      <a-entity position="0 1.6 0">
+        <!-- Stars left side -->
+        <a-sphere position="-4 0.3 -2" radius="0.03" material="color: #ffffff; shader: flat"></a-sphere>
+        <a-sphere position="-5 0.8 1" radius="0.04" material="color: #aaccff; shader: flat"></a-sphere>
+        <a-sphere position="-3.5 -0.5 3" radius="0.03" material="color: #ffffff; shader: flat"></a-sphere>
+        <a-sphere position="-6 0.1 -4" radius="0.05" material="color: #ffffcc; shader: flat"></a-sphere>
+        <a-sphere position="-4.5 0.7 5" radius="0.03" material="color: #ffffff; shader: flat"></a-sphere>
+        <a-sphere position="-5.5 -0.3 -1" radius="0.04" material="color: #ddeeff; shader: flat"></a-sphere>
+        <a-sphere position="-7 0.5 2" radius="0.06" material="color: #ffffff; shader: flat"></a-sphere>
+        <a-sphere position="-4 -0.8 -5" radius="0.03" material="color: #ccddff; shader: flat"></a-sphere>
+        <!-- Stars right side -->
+        <a-sphere position="4 0.5 -3" radius="0.04" material="color: #ffffff; shader: flat"></a-sphere>
+        <a-sphere position="5 -0.2 2" radius="0.03" material="color: #aaddff; shader: flat"></a-sphere>
+        <a-sphere position="3.5 0.9 4" radius="0.05" material="color: #ffffff; shader: flat"></a-sphere>
+        <a-sphere position="6 0.3 -1" radius="0.04" material="color: #ffddaa; shader: flat"></a-sphere>
+        <a-sphere position="4.5 -0.5 -4" radius="0.03" material="color: #ffffff; shader: flat"></a-sphere>
+        <a-sphere position="5.5 0.6 0" radius="0.05" material="color: #ddeeff; shader: flat"></a-sphere>
+        <a-sphere position="7 -0.1 3" radius="0.06" material="color: #ffffff; shader: flat"></a-sphere>
+        <a-sphere position="4 0.8 6" radius="0.03" material="color: #ccddff; shader: flat"></a-sphere>
+        <!-- Nebula wisps -->
+        <a-sphere position="-6 0 -2" radius="2" material="color: #0d001a; shader: flat; opacity: 0.08; transparent: true"></a-sphere>
+        <a-sphere position="6 0.5 1" radius="2.5" material="color: #001133; shader: flat; opacity: 0.06; transparent: true"></a-sphere>
+      </a-entity>
+
+      <!-- Corridor lighting (much brighter) -->
+      <a-light type="point" position="0 2.8 -4" color="#5577bb" intensity="1.5" distance="10"></a-light>
+      <a-light type="point" position="0 2.8 0" color="#5577bb" intensity="1.5" distance="10"></a-light>
+      <a-light type="point" position="0 2.8 4" color="#5577bb" intensity="1.5" distance="10"></a-light>
+      <!-- Ceiling LED strips -->
+      <a-box position="0 3.15 -3" width="0.1" height="0.04" depth="4" material="color: #4488ff; shader: flat; opacity: 0.9"></a-box>
+      <a-box position="0 3.15 3" width="0.1" height="0.04" depth="4" material="color: #4488ff; shader: flat; opacity: 0.9"></a-box>
+      <!-- Floor guide strips -->
+      <a-box position="-0.5 0.01 0" width="0.05" height="0.01" depth="14" material="color: #00f0ff; shader: flat; opacity: 0.4"></a-box>
+      <a-box position="0.5 0.01 0" width="0.05" height="0.01" depth="14" material="color: #00f0ff; shader: flat; opacity: 0.4"></a-box>
+
       <a-entity id="door-control" class="interactive" data-interaction="door-control" position="0 0 7">
         <a-box position="-1.1 1.6 0" width="0.2" height="3.2" depth="0.3"
           material="color: #2a2a45; metalness: 0.7"></a-box>
@@ -167,14 +233,13 @@
       <a-plane position="4 1.75 -5" width="2" height="3.5" material="color: #1a1a30; side: double"></a-plane>
       <a-plane position="0 0.3 -5" width="6" height="0.6" material="color: #1a1a30; side: double"></a-plane>
       <a-plane position="0 3.35 -5" width="6" height="0.3" material="color: #1a1a30; side: double"></a-plane>
-      <!-- Window frame (metallic border) -->
-      <a-box position="0 0.65 -4.98" width="6.2" height="0.08" depth="0.1" material="color: #4488cc; metalness: 0.9; roughness: 0.2"></a-box>
-      <a-box position="0 3.15 -4.98" width="6.2" height="0.08" depth="0.1" material="color: #4488cc; metalness: 0.9; roughness: 0.2"></a-box>
-      <a-box position="-3.05 1.9 -4.98" width="0.08" height="2.58" depth="0.1" material="color: #4488cc; metalness: 0.9; roughness: 0.2"></a-box>
-      <a-box position="3.05 1.9 -4.98" width="0.08" height="2.58" depth="0.1" material="color: #4488cc; metalness: 0.9; roughness: 0.2"></a-box>
-      <!-- Viewport glass (transparent — lets starfield show through) -->
-      <a-plane id="viewport" class="interactive" data-interaction="viewport" position="0 1.9 -4.96" width="6" height="2.5"
-        material="color: #0a1525; shader: flat; opacity: 0.12; transparent: true; side: double"></a-plane>
+      <!-- Window frame (metallic border) — clickable -->
+      <a-entity id="viewport" class="interactive" data-interaction="viewport">
+        <a-box position="0 0.65 -4.98" width="6.2" height="0.08" depth="0.1" material="color: #4488cc; metalness: 0.9; roughness: 0.2"></a-box>
+        <a-box position="0 3.15 -4.98" width="6.2" height="0.08" depth="0.1" material="color: #4488cc; metalness: 0.9; roughness: 0.2"></a-box>
+        <a-box position="-3.05 1.9 -4.98" width="0.08" height="2.58" depth="0.1" material="color: #4488cc; metalness: 0.9; roughness: 0.2"></a-box>
+        <a-box position="3.05 1.9 -4.98" width="0.08" height="2.58" depth="0.1" material="color: #4488cc; metalness: 0.9; roughness: 0.2"></a-box>
+      </a-entity>
       <!-- Side walls -->
       <a-plane position="-5 1.75 0" rotation="0 90 0" width="10" height="3.5"
         material="color: #1e1e35; side: double"></a-plane>
@@ -280,15 +345,39 @@
     <a-entity id="laboratory" position="0 0 40" visible="false">
       <!-- Floor & Ceiling -->
       <a-plane position="0 0 0" rotation="-90 0 0" width="8" height="10"
-        material="color: #141428; side: double"></a-plane>
+        material="color: #181830; side: double"></a-plane>
       <a-plane position="0 3.2 0" rotation="90 0 0" width="8" height="10"
-        material="color: #0f0f20; side: double"></a-plane>
-      <!-- Walls -->
-      <a-plane position="0 1.6 -5" width="8" height="3.2" material="color: #1a1a30; side: double"></a-plane>
+        material="color: #121225; side: double"></a-plane>
+
+      <!-- Back wall with observation window -->
+      <a-plane position="-3 1.6 -5" width="2" height="3.2" material="color: #1a1a30; side: double"></a-plane>
+      <a-plane position="3 1.6 -5" width="2" height="3.2" material="color: #1a1a30; side: double"></a-plane>
+      <a-plane position="0 0.3 -5" width="4" height="0.6" material="color: #1a1a30; side: double"></a-plane>
+      <a-plane position="0 2.95 -5" width="4" height="0.5" material="color: #1a1a30; side: double"></a-plane>
+      <!-- Lab observation window -->
+      <a-plane position="0 1.6 -4.96" width="4" height="2"
+        material="color: #061020; shader: flat; opacity: 0.1; transparent: true; side: double"></a-plane>
+      <a-box position="0 0.6 -4.97" width="4.1" height="0.06" depth="0.06" material="color: #4488cc; metalness: 0.9"></a-box>
+      <a-box position="0 2.6 -4.97" width="4.1" height="0.06" depth="0.06" material="color: #4488cc; metalness: 0.9"></a-box>
+      <!-- Lab window stars -->
+      <a-entity position="0 1.6 -5">
+        <a-sphere position="-1 0.5 -6" radius="0.04" material="color: #ffffff; shader: flat"></a-sphere>
+        <a-sphere position="0.5 -0.3 -8" radius="0.05" material="color: #aaccff; shader: flat"></a-sphere>
+        <a-sphere position="-0.3 0.8 -7" radius="0.03" material="color: #ffffff; shader: flat"></a-sphere>
+        <a-sphere position="1.2 0.2 -10" radius="0.06" material="color: #ffffcc; shader: flat"></a-sphere>
+        <a-sphere position="-1.5 -0.4 -9" radius="0.04" material="color: #ffffff; shader: flat"></a-sphere>
+        <a-sphere position="0.8 0.6 -12" radius="0.05" material="color: #ddeeff; shader: flat"></a-sphere>
+        <a-sphere position="-0.7 0.1 -11" radius="0.03" material="color: #ffffff; shader: flat"></a-sphere>
+        <a-sphere position="1.5 -0.6 -8" radius="0.04" material="color: #ffddaa; shader: flat"></a-sphere>
+        <a-sphere position="-2 0.4 -15" radius="1.5" material="color: #0d001a; shader: flat; opacity: 0.1; transparent: true"></a-sphere>
+      </a-entity>
+
+      <!-- Side walls -->
       <a-plane position="-4 1.6 0" rotation="0 90 0" width="10" height="3.2"
         material="color: #1e1e35; side: double"></a-plane>
       <a-plane position="4 1.6 0" rotation="0 -90 0" width="10" height="3.2"
         material="color: #1e1e35; side: double"></a-plane>
+      <!-- Back wall segments (door) -->
       <a-plane position="-2.5 1.6 5" width="3" height="3.2" material="color: #1a1a30; side: double"></a-plane>
       <a-plane position="2.5 1.6 5" width="3" height="3.2" material="color: #1a1a30; side: double"></a-plane>
       <a-plane position="0 2.85 5" width="2" height="0.7" material="color: #1a1a30; side: double"></a-plane>
@@ -302,6 +391,8 @@
           material="color: #8888aa; metalness: 0.8"></a-cylinder>
         <a-box position="0 1.35 0.1" width="0.1" height="0.1" depth="0.2" rotation="-30 0 0"
           material="color: #333344"></a-box>
+        <!-- Green glow on microscope -->
+        <a-light type="point" position="0 1.4 0" color="#00ff66" intensity="0.5" distance="3"></a-light>
       </a-entity>
 
       <!-- Door to Airlock -->
@@ -315,8 +406,23 @@
           opacity="0.7"></a-text>
       </a-entity>
 
-      <a-light type="point" position="-2.5 2.5 -2" color="#ffffff" intensity="1.5" distance="10"></a-light>
-      <a-light type="point" position="0 2.8 0" color="#3a4a8a" intensity="1.0" distance="12"></a-light>
+      <!-- Door back to Control Room -->
+      <a-entity id="lab-control-door" class="interactive" data-interaction="door-back-control" position="-3.9 0 0" rotation="0 90 0">
+        <a-box position="-1.1 1.6 0" width="0.2" height="3.2" depth="0.3"
+          material="color: #2a2a45; metalness: 0.7"></a-box>
+        <a-box position="1.1 1.6 0" width="0.2" height="3.2" depth="0.3"
+          material="color: #2a2a45; metalness: 0.7"></a-box>
+        <a-box position="0 3 0" width="2.4" height="0.4" depth="0.3" material="color: #2a2a45; metalness: 0.7"></a-box>
+        <a-text value="CONTROL ROOM" position="0 2.9 0.16" align="center" width="1.8" color="#00f0ff" font="mozillavr"
+          opacity="0.7"></a-text>
+      </a-entity>
+      <!-- Brighter lab lighting -->
+      <a-light type="point" position="-2.5 2.5 -2" color="#ffffff" intensity="2.0" distance="12"></a-light>
+      <a-light type="point" position="2 2.8 -2" color="#aabbff" intensity="1.5" distance="10"></a-light>
+      <a-light type="point" position="0 2.8 2" color="#5577bb" intensity="1.2" distance="10"></a-light>
+      <!-- Ceiling LED strips -->
+      <a-box position="-2 3.15 0" width="0.08" height="0.03" depth="8" material="color: #00f0ff; shader: flat; opacity: 0.8"></a-box>
+      <a-box position="2 3.15 0" width="0.08" height="0.03" depth="8" material="color: #00f0ff; shader: flat; opacity: 0.8"></a-box>
     </a-entity>
 
     <!-- AIRLOCK -->
@@ -366,12 +472,28 @@
           material="color: #88ccff; opacity: 0.5; transparent: true"></a-box>
       </a-entity>
 
-      <a-light id="airlock-light" type="point" position="0 2.8 0" color="#3a4a8a" intensity="1.0"
-        distance="10"></a-light>
+      <!-- Door back to Laboratory -->
+      <a-entity id="airlock-lab-door" class="interactive" data-interaction="door-back-lab" position="0 0 4">
+        <a-box position="-1.1 1.6 0" width="0.2" height="3.2" depth="0.3"
+          material="color: #2a2a45; metalness: 0.7"></a-box>
+        <a-box position="1.1 1.6 0" width="0.2" height="3.2" depth="0.3"
+          material="color: #2a2a45; metalness: 0.7"></a-box>
+        <a-box position="0 3 0" width="2.4" height="0.4" depth="0.3" material="color: #2a2a45; metalness: 0.7"></a-box>
+        <a-text value="LABORATORY" position="0 2.9 0.16" align="center" width="2" color="#00f0ff" font="mozillavr"
+          opacity="0.7"></a-text>
+      </a-entity>
+
+      <!-- Airlock lighting (brighter with warning accents) -->
+      <a-light id="airlock-light" type="point" position="0 2.8 0" color="#5577bb" intensity="1.5"
+        distance="12"></a-light>
+      <a-light type="point" position="0 2.8 -2" color="#ff6600" intensity="0.8" distance="8"></a-light>
+      <!-- Warning stripe accents -->
+      <a-box position="-2.98 0.1 0" width="0.04" height="0.2" depth="8" material="color: #ff8800; shader: flat; opacity: 0.6"></a-box>
+      <a-box position="2.98 0.1 0" width="0.04" height="0.2" depth="8" material="color: #ff8800; shader: flat; opacity: 0.6"></a-box>
     </a-entity>
 
     <a-light id="hazard-light" type="ambient" color="#ff0000" intensity="0.0" visible="false"></a-light>
-    <a-light id="global-ambient" type="ambient" color="#252550" intensity="1.2"></a-light>
+    <a-light id="global-ambient" type="ambient" color="#303060" intensity="1.5"></a-light>
   </a-scene>
 
   <!-- INTRO SCREEN (layered on top of A-Frame) -->

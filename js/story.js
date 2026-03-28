@@ -70,6 +70,15 @@ const StoryEngine = (() => {
       { speaker: 'RYLAND', text: 'I need to get to the control room. There has to be more information there.' },
     ],
 
+    // --- PERSONAL LOCKER ---
+    photo: [
+      { speaker: 'RYLAND', text: 'My personal locker. There\'s a name stenciled on it: "GRACE, R."' },
+      { speaker: 'RYLAND', text: 'Inside... a photo. A woman. She\'s smiling at the camera.' },
+      { speaker: 'RYLAND', text: 'I don\'t remember her name. But my chest hurts when I look at her.' },
+      { speaker: 'RYLAND', text: 'My heart remembers what my brain can\'t. She\'s important. She\'s everything.' },
+      { speaker: 'RYLAND', text: 'Wait... something\'s coming back. A classroom. Fluorescent lights...' },
+    ],
+
     // --- DOORS ---
     'door-corridor': [
       { speaker: 'RYLAND', text: 'The corridor. It stretches ahead, dimly lit. The ship hums with a low vibration.' },
