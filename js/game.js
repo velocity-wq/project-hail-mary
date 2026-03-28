@@ -38,8 +38,18 @@ const GameEngine = (() => {
 
   // ===== WASD MOVEMENT =====
   const keys = { w: false, a: false, s: false, d: false };
-  const moveSpeed = 5;
+  const walkSpeed = 3.5;
+  const sprintSpeed = 8;
   let lastFrameTime = 0;
+
+  // ===== SPRINT / STAMINA =====
+  let isSprinting = false;
+  let stamina = 100;
+  const staminaDrain = 30;   // per second while sprinting
+  const staminaRegen = 20;   // per second while not sprinting
+
+  // ===== FLASHLIGHT =====
+  let flashlightOn = false;
 
   // Room boundaries
   const roomBounds = {
@@ -56,7 +66,15 @@ const GameEngine = (() => {
       const key = e.key.toLowerCase();
       if (key in keys) keys[key] = true;
 
-      // Space/Enter: advance dialogue OR skip wakeup
+      // Shift: sprint
+      if (e.key === 'Shift') isSprinting = true;
+
+      // F: toggle flashlight
+      if (key === 'f' && state.inGameWorld) {
+        toggleFlashlight();
+      }
+
+      // Space/Enter: advance dialogue OR skip wakeup/flashback
       if (e.key === ' ' || e.key === 'Enter') {
         e.preventDefault();
         if (StoryEngine.isDialogueActive()) {
@@ -65,15 +83,37 @@ const GameEngine = (() => {
           StoryEngine.skipCurrentWakeupStep();
         }
       }
+
+      // Escape: force-skip wakeup entirely
+      if (e.key === 'Escape') {
+        if (StoryEngine.isWakeupActive()) {
+          StoryEngine.skipWakeup();
+        }
+      }
     });
 
     document.addEventListener('keyup', (e) => {
       const key = e.key.toLowerCase();
       if (key in keys) keys[key] = false;
+      if (e.key === 'Shift') isSprinting = false;
     });
   }
 
-  // ===== GAME LOOP (WASD + collision) =====
+  // ===== FLASHLIGHT =====
+  function toggleFlashlight() {
+    flashlightOn = !flashlightOn;
+    const light = document.getElementById('flashlight');
+    if (light) {
+      light.setAttribute('visible', flashlightOn);
+    }
+    // HUD indicator
+    const indicator = document.getElementById('flashlight-indicator');
+    if (indicator) {
+      indicator.classList.toggle('active', flashlightOn);
+    }
+  }
+
+  // ===== GAME LOOP (WASD + collision + sprint/stamina) =====
   function gameLoop(time) {
     requestAnimationFrame(gameLoop);
     if (!state.controlsEnabled || !state.inGameWorld) {
@@ -84,7 +124,19 @@ const GameEngine = (() => {
     const dt = Math.min((time - lastFrameTime) / 1000, 0.1);
     lastFrameTime = time;
 
-    // Get yaw from the hold-to-look component
+    // --- Sprint & Stamina ---
+    const isMoving = keys.w || keys.a || keys.s || keys.d;
+    const canSprint = isSprinting && stamina > 0 && isMoving;
+    const currentSpeed = canSprint ? sprintSpeed : walkSpeed;
+
+    if (canSprint) {
+      stamina = Math.max(0, stamina - staminaDrain * dt);
+    } else {
+      stamina = Math.min(100, stamina + staminaRegen * dt);
+    }
+    updateStaminaBar();
+
+    // --- Camera yaw ---
     const camera = document.getElementById('player-camera');
     const holdToLook = camera?.components?.['hold-to-look'];
     const yaw = holdToLook ? holdToLook.getYaw() : 0;
@@ -99,8 +151,8 @@ const GameEngine = (() => {
     const len = Math.sqrt(moveX * moveX + moveZ * moveZ);
     if (len === 0) return;
 
-    moveX = (moveX / len) * moveSpeed * dt;
-    moveZ = (moveZ / len) * moveSpeed * dt;
+    moveX = (moveX / len) * currentSpeed * dt;
+    moveZ = (moveZ / len) * currentSpeed * dt;
 
     const cameraRig = document.getElementById('camera-rig');
     if (!cameraRig) return;
@@ -116,6 +168,23 @@ const GameEngine = (() => {
     }
 
     cameraRig.setAttribute('position', { x: newX, y: pos.y, z: newZ });
+  }
+
+  function updateStaminaBar() {
+    const fill = document.getElementById('stamina-fill');
+    const container = document.getElementById('stamina-bar');
+    if (!fill || !container) return;
+    fill.style.width = stamina + '%';
+    // Color shifts: green > yellow > red
+    if (stamina > 50) {
+      fill.style.background = 'linear-gradient(90deg, #00ff66, #00cc55)';
+    } else if (stamina > 20) {
+      fill.style.background = 'linear-gradient(90deg, #ffaa00, #ff8800)';
+    } else {
+      fill.style.background = 'linear-gradient(90deg, #ff4444, #ff2222)';
+    }
+    // Show/hide bar: show when sprinting or stamina < 100
+    container.classList.toggle('visible', isSprinting || stamina < 99);
   }
 
   // ===== INITIALIZATION =====
@@ -175,17 +244,24 @@ const GameEngine = (() => {
     state.inGameWorld = true;
     document.body.classList.add('in-game');
 
+    // Force cleanup all overlay screens
     const wakeup = document.getElementById('wakeup-screen');
     wakeup.classList.remove('active');
     wakeup.style.display = 'none';
+    wakeup.style.opacity = '';
+    wakeup.style.transition = '';
 
-    // Position camera
+    const intro = document.getElementById('intro-screen');
+    intro.classList.remove('active');
+    intro.style.display = 'none';
+
+    // Position camera in med bay
     document.getElementById('camera-rig').setAttribute('position', '0 0 -1');
 
     // Show HUD
     setTimeout(() => {
       document.getElementById('hud').classList.remove('hidden');
-    }, 500);
+    }, 300);
 
     // Enable controls + first dialogue
     setTimeout(() => {
@@ -195,7 +271,7 @@ const GameEngine = (() => {
       StoryEngine.showDialogue('firstLook', () => {
         StoryEngine.showObjective('Look around the med bay. Hold left-click + drag to look. Walk to glowing objects.');
       });
-    }, 1500);
+    }, 800);
   }
 
   // ===== ENABLE/DISABLE CONTROLS =====
@@ -242,7 +318,11 @@ const GameEngine = (() => {
           if (interaction) {
             hideInteractionPrompt();
             document.getElementById('crosshair').classList.remove('active');
-            StoryEngine.showDialogue(interaction.dialogue, interaction.onComplete);
+            if (interaction.dialogue) {
+              StoryEngine.showDialogue(interaction.dialogue, interaction.onComplete);
+            } else if (interaction.onComplete) {
+              interaction.onComplete();
+            }
           }
         });
       });
@@ -279,6 +359,12 @@ const GameEngine = (() => {
         `${config.position.x} ${config.position.y} ${config.position.z}`);
       document.getElementById('hud-location-text').textContent = config.label;
       state.currentRoom = roomId;
+
+      // Stop beep audio when leaving med bay
+      if (roomId !== 'medbay') {
+        const beep = document.getElementById('audio-beep');
+        if (beep) beep.pause();
+      }
 
       setTimeout(() => {
         overlay.classList.remove('active');

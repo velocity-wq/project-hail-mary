@@ -1,98 +1,86 @@
 /* ============================================
    HOLD-TO-LOOK — A-Frame Component
-   Registers BEFORE the scene loads.
-   Hold left-click + drag to orbit the camera.
-   This is the canonical A-Frame way to add
-   custom camera controls.
+   Click to lock pointer (FPS-style).
+   Mouse movement orbits the camera.
+   Press ESC or click outside to unlock.
    ============================================ */
 
 AFRAME.registerComponent('hold-to-look', {
   schema: {
-    sensitivity: { type: 'number', default: 0.2 },
+    sensitivity: { type: 'number', default: 0.15 },
     enabled: { type: 'boolean', default: false },
   },
 
   init: function () {
     this.yaw = 0;
     this.pitch = 0;
-    this.isHolding = false;
-    this.prevX = 0;
-    this.prevY = 0;
+    this.isLocked = false;
 
     // Bind methods
-    this._onMouseDown = this._onMouseDown.bind(this);
     this._onMouseMove = this._onMouseMove.bind(this);
-    this._onMouseUp = this._onMouseUp.bind(this);
+    this._onClick = this._onClick.bind(this);
+    this._onLockChange = this._onLockChange.bind(this);
     this._onContextMenu = this._onContextMenu.bind(this);
-    this._onDragStart = this._onDragStart.bind(this);
 
-    // Bind to canvas — try immediately, then fallback to renderstart
+    // Bind to canvas
     const tryBind = () => {
       const canvas = this.el.sceneEl.canvas;
       if (!canvas) return false;
 
-      canvas.addEventListener('mousedown', this._onMouseDown);
+      canvas.addEventListener('click', this._onClick);
       canvas.addEventListener('contextmenu', this._onContextMenu);
-      canvas.addEventListener('dragstart', this._onDragStart);
       canvas.setAttribute('draggable', 'false');
       canvas.style.userSelect = 'none';
 
-      // mousemove/mouseup on window so dragging outside canvas still works
-      window.addEventListener('mousemove', this._onMouseMove);
-      window.addEventListener('mouseup', this._onMouseUp);
+      document.addEventListener('mousemove', this._onMouseMove);
+      document.addEventListener('pointerlockchange', this._onLockChange);
 
-      console.log('[hold-to-look] Bound to canvas successfully');
+      console.log('[hold-to-look] Pointer lock mode ready');
       return true;
     };
 
-    // Try immediate binding
     if (!tryBind()) {
-      // Canvas not ready yet — wait for renderstart
       this.el.sceneEl.addEventListener('renderstart', () => tryBind());
-      // Absolute fallback
       setTimeout(() => tryBind(), 2000);
     }
   },
 
-  _onMouseDown: function (e) {
+  _onClick: function (e) {
     if (!this.data.enabled) return;
-    if (e.button !== 0) return; // left click only
 
-    this.isHolding = true;
-    this.prevX = e.clientX;
-    this.prevY = e.clientY;
-    e.preventDefault();
+    // If not locked, request pointer lock
+    if (!this.isLocked) {
+      const canvas = this.el.sceneEl.canvas;
+      if (canvas && canvas.requestPointerLock) {
+        canvas.requestPointerLock();
+      }
+    }
+  },
 
-    // Visual feedback
-    this.el.sceneEl.canvas.style.cursor = 'grabbing';
+  _onLockChange: function () {
+    const canvas = this.el.sceneEl.canvas;
+    this.isLocked = (document.pointerLockElement === canvas);
+
+    if (this.isLocked) {
+      canvas.style.cursor = 'none';
+    } else {
+      canvas.style.cursor = '';
+    }
   },
 
   _onMouseMove: function (e) {
-    if (!this.isHolding || !this.data.enabled) return;
+    if (!this.isLocked || !this.data.enabled) return;
 
-    const dx = e.clientX - this.prevX;
-    const dy = e.clientY - this.prevY;
-    this.prevX = e.clientX;
-    this.prevY = e.clientY;
+    const dx = e.movementX || 0;
+    const dy = e.movementY || 0;
 
     this.yaw -= dx * this.data.sensitivity;
     this.pitch -= dy * this.data.sensitivity;
     this.pitch = Math.max(-85, Math.min(85, this.pitch));
   },
 
-  _onMouseUp: function () {
-    this.isHolding = false;
-    if (this.el.sceneEl.canvas) {
-      this.el.sceneEl.canvas.style.cursor = '';
-    }
-  },
-
   _onContextMenu: function (e) { e.preventDefault(); },
-  _onDragStart: function (e) { e.preventDefault(); },
 
-  // tick() runs every frame as part of A-Frame's render loop.
-  // We directly set the Three.js rotation — this CANNOT be overridden
-  // by any other A-Frame system.
   tick: function () {
     if (!this.data.enabled) return;
 
@@ -103,7 +91,6 @@ AFRAME.registerComponent('hold-to-look', {
     this.el.object3D.rotation.order = 'YXZ';
   },
 
-  // Expose yaw for movement calculations
   getYaw: function () {
     return this.yaw;
   },
@@ -111,11 +98,10 @@ AFRAME.registerComponent('hold-to-look', {
   remove: function () {
     const canvas = this.el.sceneEl.canvas;
     if (canvas) {
-      canvas.removeEventListener('mousedown', this._onMouseDown);
+      canvas.removeEventListener('click', this._onClick);
       canvas.removeEventListener('contextmenu', this._onContextMenu);
-      canvas.removeEventListener('dragstart', this._onDragStart);
     }
-    window.removeEventListener('mousemove', this._onMouseMove);
-    window.removeEventListener('mouseup', this._onMouseUp);
+    document.removeEventListener('mousemove', this._onMouseMove);
+    document.removeEventListener('pointerlockchange', this._onLockChange);
   },
 });

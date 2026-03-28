@@ -25,11 +25,16 @@
       <a-entity id="player-camera" camera
         hold-to-look="enabled: false"
         position="0 1.6 0">
-        <a-entity cursor="fuse: false; rayOrigin: mouse"
-          raycaster="far: 5; objects: .interactive"
+        <a-entity cursor="fuse: false; rayOrigin: entity"
+          raycaster="far: 8; objects: .interactive"
           position="0 0 -1"
           geometry="primitive: ring; radiusInner: 0.008; radiusOuter: 0.012"
           material="color: #00f0ff; shader: flat; opacity: 0.6"></a-entity>
+        <!-- Flashlight (spotlight attached to camera, off by default) -->
+        <a-light id="flashlight" type="spot" color="#ffffee" intensity="3" distance="20"
+          angle="35" penumbra="0.3" decay="2" position="0.15 -0.1 0"
+          target="#flashlight-target" visible="false"></a-light>
+        <a-entity id="flashlight-target" position="0 0 -5"></a-entity>
       </a-entity>
     </a-entity>
 
@@ -91,6 +96,29 @@
         <a-text value="MED BAY" position="0 2.9 0.16" align="center" width="2" color="#00f0ff" font="mozillavr" opacity="0.7"></a-text>
       </a-entity>
 
+      <!-- Oxygen / Life Support Monitor (right wall) -->
+      <a-entity id="oxygen-monitor" class="interactive" data-interaction="oxygen" position="3.5 1.5 1">
+        <a-box width="0.6" height="0.5" depth="0.05" material="color: #0a0a18; roughness: 0.3; metalness: 0.7"></a-box>
+        <a-plane position="0 0 0.03" width="0.5" height="0.4" material="color: #00ff66; shader: flat; opacity: 0.3"></a-plane>
+        <a-text value="O2" position="0 0.1 0.04" align="center" width="1.2" color="#00ff66" font="mozillavr" opacity="0.6"></a-text>
+        <a-text value="98.2%" position="0 -0.05 0.04" align="center" width="0.8" color="#00ff66" font="mozillavr" opacity="0.4"></a-text>
+      </a-entity>
+
+      <!-- Supply Cabinet (near door) -->
+      <a-entity id="supply-cabinet" class="interactive" data-interaction="supplies" position="3 1 3.5">
+        <a-box width="0.8" height="1.4" depth="0.5" material="color: #252540; roughness: 0.6; metalness: 0.5"></a-box>
+        <a-box position="0 0.3 0.26" width="0.08" height="0.2" depth="0.04" material="color: #3a3a55; metalness: 0.8"></a-box>
+        <a-text value="SUPPLIES" position="0 0.8 0.26" align="center" width="0.7" color="#8888aa" font="mozillavr" opacity="0.4"></a-text>
+      </a-entity>
+
+      <!-- Emergency Status Panel (left wall) -->
+      <a-entity id="emergency-panel" class="interactive" data-interaction="emergency" position="-3.9 1.5 0" rotation="0 90 0">
+        <a-box width="0.8" height="0.5" depth="0.05" material="color: #1a0a0a; roughness: 0.4; metalness: 0.6"></a-box>
+        <a-plane position="0 0 0.03" width="0.7" height="0.4" material="color: #ff2244; shader: flat; opacity: 0.15"></a-plane>
+        <a-text value="⚠ EMERGENCY" position="0 0.1 0.04" align="center" width="0.8" color="#ff2244" font="mozillavr" opacity="0.5"></a-text>
+        <a-text value="ALL CREW REPORT" position="0 -0.05 0.04" align="center" width="0.7" color="#ff4444" font="mozillavr" opacity="0.3"></a-text>
+      </a-entity>
+
       <!-- Lighting -->
       <a-light type="point" position="0 3 0" color="#6a6aaa" intensity="2.5" distance="20"></a-light>
       <a-light type="point" position="-3.5 2.8 -4" color="#ff2244" intensity="1.5" distance="12"></a-light>
@@ -108,7 +136,48 @@
       <a-plane position="0 3.2 0" rotation="90 0 0" width="3" height="14" material="color: #0f0f20; side: double"></a-plane>
       <a-plane position="-1.5 1.6 0" rotation="0 90 0" width="14" height="3.2" material="color: #1a1a30; side: double"></a-plane>
       <a-plane position="1.5 1.6 0" rotation="0 -90 0" width="14" height="3.2" material="color: #1e1e35; side: double"></a-plane>
-      <a-light type="point" position="0 2.8 0" color="#3a4a8a" intensity="0.8" distance="12"></a-light>
+
+      <!-- Ceiling pipes -->
+      <a-cylinder position="-0.8 3.0 0" radius="0.05" height="14" rotation="90 0 0" material="color: #3a3a55; metalness: 0.8"></a-cylinder>
+      <a-cylinder position="0.8 3.0 0" radius="0.05" height="14" rotation="90 0 0" material="color: #3a3a55; metalness: 0.8"></a-cylinder>
+      <a-cylinder position="0 3.1 0" radius="0.03" height="14" rotation="90 0 0" material="color: #2a2a45; metalness: 0.7"></a-cylinder>
+
+      <!-- Ceiling light strips -->
+      <a-box position="0 3.15 -3" width="0.1" height="0.03" depth="2" material="color: #3366cc; shader: flat; opacity: 0.6"></a-box>
+      <a-box position="0 3.15 0" width="0.1" height="0.03" depth="2" material="color: #3366cc; shader: flat; opacity: 0.6"></a-box>
+      <a-box position="0 3.15 3" width="0.1" height="0.03" depth="2" material="color: #3366cc; shader: flat; opacity: 0.6"></a-box>
+      <a-box position="0 3.15 6" width="0.1" height="0.03" depth="2" material="color: #3366cc; shader: flat; opacity: 0.6"></a-box>
+
+      <!-- Emergency floor strip lights -->
+      <a-box position="-1.3 0.02 -3" width="0.08" height="0.02" depth="1.5" material="color: #ff2244; shader: flat; opacity: 0.3"></a-box>
+      <a-box position="-1.3 0.02 0" width="0.08" height="0.02" depth="1.5" material="color: #ff2244; shader: flat; opacity: 0.3"></a-box>
+      <a-box position="-1.3 0.02 3" width="0.08" height="0.02" depth="1.5" material="color: #ff2244; shader: flat; opacity: 0.3"></a-box>
+      <a-box position="-1.3 0.02 6" width="0.08" height="0.02" depth="1.5" material="color: #ff2244; shader: flat; opacity: 0.3"></a-box>
+      <a-box position="1.3 0.02 -3" width="0.08" height="0.02" depth="1.5" material="color: #ff2244; shader: flat; opacity: 0.3"></a-box>
+      <a-box position="1.3 0.02 0" width="0.08" height="0.02" depth="1.5" material="color: #ff2244; shader: flat; opacity: 0.3"></a-box>
+      <a-box position="1.3 0.02 3" width="0.08" height="0.02" depth="1.5" material="color: #ff2244; shader: flat; opacity: 0.3"></a-box>
+      <a-box position="1.3 0.02 6" width="0.08" height="0.02" depth="1.5" material="color: #ff2244; shader: flat; opacity: 0.3"></a-box>
+
+      <!-- Wall detail panels (left wall) -->
+      <a-box position="-1.45 1.0 -2" width="0.05" height="0.8" depth="1.2" material="color: #222240; metalness: 0.5"></a-box>
+      <a-box position="-1.45 1.0 2" width="0.05" height="0.8" depth="1.2" material="color: #222240; metalness: 0.5"></a-box>
+      <a-box position="-1.45 1.0 5" width="0.05" height="0.8" depth="1.2" material="color: #222240; metalness: 0.5"></a-box>
+
+      <!-- Wall detail panels (right wall) -->
+      <a-box position="1.45 1.0 -1" width="0.05" height="0.8" depth="1.2" material="color: #222240; metalness: 0.5"></a-box>
+      <a-box position="1.45 1.0 3" width="0.05" height="0.8" depth="1.2" material="color: #222240; metalness: 0.5"></a-box>
+
+      <!-- Section sign -->
+      <a-text value="SECTION C-2" position="-1.44 2.5 0" rotation="0 90 0" align="center" width="1.5" color="#3366cc" font="mozillavr" opacity="0.4"></a-text>
+      <a-text value="→ CONTROL" position="1.44 2.5 4" rotation="0 -90 0" align="center" width="1.5" color="#ff8800" font="mozillavr" opacity="0.4"></a-text>
+
+      <!-- Lighting -->
+      <a-light type="point" position="0 2.8 -3" color="#3a4a8a" intensity="0.5" distance="8"></a-light>
+      <a-light type="point" position="0 2.8 0" color="#3a4a8a" intensity="0.6" distance="8"></a-light>
+      <a-light type="point" position="0 2.8 3" color="#3a4a8a" intensity="0.5" distance="8"></a-light>
+      <a-light type="point" position="0 2.8 6" color="#3a4a8a" intensity="0.6" distance="8"></a-light>
+
+      <!-- Door to Control Room -->
       <a-entity id="door-control" class="interactive" data-interaction="door-control" position="0 0 7">
         <a-box position="-1.1 1.6 0" width="0.2" height="3.2" depth="0.3" material="color: #2a2a45; metalness: 0.7"></a-box>
         <a-box position="1.1 1.6 0" width="0.2" height="3.2" depth="0.3" material="color: #2a2a45; metalness: 0.7"></a-box>
@@ -126,13 +195,69 @@
       <a-plane position="5 1.75 0" rotation="0 -90 0" width="10" height="3.5" material="color: #1e1e35; side: double"></a-plane>
       <a-plane position="-3 1.75 5" width="4" height="3.5" material="color: #1a1a30; side: double"></a-plane>
       <a-plane position="3 1.75 5" width="4" height="3.5" material="color: #1a1a30; side: double"></a-plane>
+
+      <!-- VIEWPORT with stars -->
       <a-plane id="viewport" class="interactive" data-interaction="viewport" position="0 2 -4.95" width="6" height="2.5" material="color: #000008; shader: flat"></a-plane>
+      <!-- Stars visible -->
+      <a-plane position="0.5 2.3 -4.93" width="0.02" height="0.02" material="color: #ffffff; shader: flat"></a-plane>
+      <a-plane position="-1.2 2.5 -4.93" width="0.015" height="0.015" material="color: #ffffff; shader: flat"></a-plane>
+      <a-plane position="1.8 1.6 -4.93" width="0.02" height="0.02" material="color: #aaddff; shader: flat"></a-plane>
+      <a-plane position="-0.3 1.4 -4.93" width="0.01" height="0.01" material="color: #ffffff; shader: flat"></a-plane>
+      <a-plane position="2.1 2.8 -4.93" width="0.015" height="0.015" material="color: #ffffff; shader: flat"></a-plane>
+      <a-plane position="-2.0 1.8 -4.93" width="0.02" height="0.02" material="color: #ffffcc; shader: flat"></a-plane>
+      <a-plane position="0.8 1.2 -4.93" width="0.01" height="0.01" material="color: #aaddff; shader: flat"></a-plane>
+      <a-plane position="-1.5 2.9 -4.93" width="0.01" height="0.01" material="color: #ffffff; shader: flat"></a-plane>
+      <!-- Viewport frame -->
+      <a-box position="0 3.3 -4.95" width="6.2" height="0.1" depth="0.05" material="color: #2a2a45; metalness: 0.7"></a-box>
+      <a-box position="0 0.65 -4.95" width="6.2" height="0.1" depth="0.05" material="color: #2a2a45; metalness: 0.7"></a-box>
+      <a-box position="-3.05 2 -4.95" width="0.1" height="2.7" depth="0.05" material="color: #2a2a45; metalness: 0.7"></a-box>
+      <a-box position="3.05 2 -4.95" width="0.1" height="2.7" depth="0.05" material="color: #2a2a45; metalness: 0.7"></a-box>
+
+      <!-- Nav Console (main) -->
       <a-entity id="nav-console" class="interactive" data-interaction="nav-console" position="0 0.9 -3.5">
         <a-box position="0 0 0" width="3" height="0.15" depth="1" rotation="-20 0 0" material="color: #1e1e35; roughness: 0.4; metalness: 0.6"></a-box>
         <a-plane position="-0.8 0.15 -0.1" width="0.6" height="0.4" rotation="-20 0 0" material="color: #00ff44; shader: flat; opacity: 0.3"></a-plane>
         <a-plane position="0.8 0.15 -0.1" width="0.6" height="0.4" rotation="-20 0 0" material="color: #ff4444; shader: flat; opacity: 0.3"></a-plane>
         <a-plane position="0 0.15 -0.1" width="0.6" height="0.4" rotation="-20 0 0" material="color: #00f0ff; shader: flat; opacity: 0.3"></a-plane>
+        <!-- Console legs -->
+        <a-box position="-1.3 -0.45 0" width="0.08" height="0.9" depth="0.08" material="color: #2a2a45; metalness: 0.7"></a-box>
+        <a-box position="1.3 -0.45 0" width="0.08" height="0.9" depth="0.08" material="color: #2a2a45; metalness: 0.7"></a-box>
       </a-entity>
+
+      <!-- Captain's chair -->
+      <a-entity position="0 0 -1.5">
+        <a-box position="0 0.4 0" width="0.8" height="0.08" depth="0.8" material="color: #252540; roughness: 0.7; metalness: 0.4"></a-box>
+        <a-box position="0 0.7 -0.35" width="0.8" height="0.55" depth="0.1" material="color: #2d2d50; roughness: 0.8; metalness: 0.3"></a-box>
+        <a-box position="-0.4 0.55 0" width="0.08" height="0.2" depth="0.3" material="color: #252540; metalness: 0.5"></a-box>
+        <a-box position="0.4 0.55 0" width="0.08" height="0.2" depth="0.3" material="color: #252540; metalness: 0.5"></a-box>
+        <a-box position="0 0.2 0" width="0.15" height="0.4" depth="0.15" material="color: #2a2a45; metalness: 0.7"></a-box>
+      </a-entity>
+
+      <!-- Side consoles (left wall) -->
+      <a-entity position="-4.5 0 -2" rotation="0 90 0">
+        <a-box position="0 0.8 0" width="1.5" height="0.08" depth="0.6" material="color: #1e1e35; metalness: 0.5"></a-box>
+        <a-plane position="0 0.9 0.01" width="1.0" height="0.4" material="color: #0044aa; shader: flat; opacity: 0.2"></a-plane>
+        <a-box position="0 0.4 0" width="1.2" height="0.8" depth="0.5" material="color: #1a1a2e; metalness: 0.4"></a-box>
+      </a-entity>
+
+      <!-- Side consoles (right wall) -->
+      <a-entity position="4.5 0 -2" rotation="0 -90 0">
+        <a-box position="0 0.8 0" width="1.5" height="0.08" depth="0.6" material="color: #1e1e35; metalness: 0.5"></a-box>
+        <a-plane position="0 0.9 0.01" width="1.0" height="0.4" material="color: #ff880044; shader: flat; opacity: 0.2"></a-plane>
+        <a-box position="0 0.4 0" width="1.2" height="0.8" depth="0.5" material="color: #1a1a2e; metalness: 0.4"></a-box>
+      </a-entity>
+
+      <!-- Mission status wall display (left wall) -->
+      <a-plane position="-4.9 2.2 0" rotation="0 90 0" width="3" height="1.5" material="color: #0a0a15; shader: flat"></a-plane>
+      <a-text value="HAIL MARY — MISSION STATUS" position="-4.88 2.8 0" rotation="0 90 0" align="center" width="2.5" color="#00f0ff" font="mozillavr" opacity="0.4"></a-text>
+      <a-text value="CREW: 1/3 ACTIVE" position="-4.88 2.4 0" rotation="0 90 0" align="center" width="2" color="#ff4444" font="mozillavr" opacity="0.3"></a-text>
+      <a-text value="FUEL: 62.4%" position="-4.88 2.1 0" rotation="0 90 0" align="center" width="2" color="#ff8800" font="mozillavr" opacity="0.3"></a-text>
+      <a-text value="DEST: TAU CETI" position="-4.88 1.8 0" rotation="0 90 0" align="center" width="2" color="#00ff66" font="mozillavr" opacity="0.3"></a-text>
+
+      <!-- Ceiling lights -->
+      <a-box position="-2 3.45 -2" width="0.1" height="0.04" depth="4" material="color: #3366cc; shader: flat; opacity: 0.5"></a-box>
+      <a-box position="2 3.45 -2" width="0.1" height="0.04" depth="4" material="color: #3366cc; shader: flat; opacity: 0.5"></a-box>
+      <a-box position="0 3.45 2" width="6" height="0.04" depth="0.1" material="color: #3366cc; shader: flat; opacity: 0.4"></a-box>
 
       <!-- Door to Laboratory -->
       <a-entity id="control-lab-door" class="interactive" data-interaction="door-lab" position="4.9 0 0" rotation="0 -90 0">
@@ -148,8 +273,11 @@
         <a-plane position="0 0 0.11" width="0.7" height="0.5" rotation="-15 0 0" material="color: #00ff66; shader: flat; opacity: 0.5"></a-plane>
       </a-entity>
 
+      <!-- Lighting -->
       <a-light type="point" position="0 3.2 0" color="#3a4a8a" intensity="1.0" distance="15"></a-light>
       <a-light type="point" position="0 1.2 -3.5" color="#00f0ff" intensity="0.8" distance="8"></a-light>
+      <a-light type="point" position="-4 2.2 0" color="#0044aa" intensity="0.4" distance="6"></a-light>
+      <a-light type="point" position="4 2.2 0" color="#ff8800" intensity="0.3" distance="6"></a-light>
     </a-entity>
 
     <!-- LABORATORY -->
@@ -243,7 +371,7 @@
   <div id="wakeup-screen" class="screen">
     <div id="wakeup-text" class="wakeup-text"></div>
     <div id="wakeup-overlay" class="wakeup-overlay"></div>
-    <div id="skip-hint" class="skip-hint hidden">PRESS SPACE OR CLICK TO SKIP ▸▸</div>
+    <div id="skip-hint" class="skip-hint hidden">SPACE to advance · ESC to skip entirely</div>
   </div>
 
   <!-- HUD OVERLAY (non-interactive display elements) -->
@@ -256,8 +384,20 @@
       <div class="prompt-key">CLICK</div><div id="prompt-text" class="prompt-text">Examine</div>
     </div>
     <div id="crosshair" class="crosshair"><div class="crosshair-inner"></div></div>
+
+    <!-- Stamina Bar (bottom right) -->
+    <div id="stamina-bar" class="stamina-bar">
+      <div class="stamina-label">SPRINT</div>
+      <div class="stamina-track"><div id="stamina-fill" class="stamina-fill"></div></div>
+    </div>
+
+    <!-- Flashlight indicator (bottom left) -->
+    <div id="flashlight-indicator" class="flashlight-indicator">
+      <span class="flashlight-icon">🔦</span> <span class="flashlight-status">OFF</span>
+    </div>
+
     <div class="hud-bottom">
-      <div class="hud-controls"><span>WASD</span> Move &nbsp;|&nbsp; <span>HOLD CLICK</span> Look &nbsp;|&nbsp; <span>CLICK</span> Interact &nbsp;|&nbsp; <span>SPACE</span> Continue</div>
+      <div class="hud-controls"><span>WASD</span> Move &nbsp;|&nbsp; <span>SHIFT</span> Sprint &nbsp;|&nbsp; <span>F</span> Flashlight &nbsp;|&nbsp; <span>SPACE</span> Continue</div>
     </div>
   </div>
 

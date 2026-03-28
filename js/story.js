@@ -61,6 +61,25 @@ const StoryEngine = (() => {
       { speaker: 'RYLAND', text: 'I need to get to the control room. There has to be more information there.' },
     ],
 
+    // --- MED BAY: EXTRA INTERACTABLES ---
+    oxygen: [
+      { speaker: 'SYSTEM', text: '> LIFE SUPPORT — NOMINAL' },
+      { speaker: 'SYSTEM', text: '> O2: 98.2%  |  CO2: 0.04%  |  TEMP: 18.7°C' },
+      { speaker: 'RYLAND', text: 'Life support is running. The ship is keeping me alive on autopilot.' },
+      { speaker: 'RYLAND', text: 'Designed to sustain three people. Now it\'s just me.' },
+    ],
+    supplies: [
+      { speaker: 'RYLAND', text: 'A medical supply cabinet. Bandages, syringes, sealed pouches of saline.' },
+      { speaker: 'RYLAND', text: 'There\'s a used coma-recovery kit. Whoever programmed the ship planned for this.' },
+      { speaker: 'RYLAND', text: 'At the bottom — MREs. Hundreds of them. "Meal, Ready-to-Eat." At least I won\'t starve.' },
+    ],
+    emergency: [
+      { speaker: 'SYSTEM', text: '> EMERGENCY STATUS: CREW LOSS — 2 OF 3' },
+      { speaker: 'SYSTEM', text: '> AUTOMATED PROTOCOLS ACTIVE. MANUAL OVERRIDE AVAILABLE.' },
+      { speaker: 'RYLAND', text: 'The ship flagged the crew deaths as an emergency, then... just kept going.' },
+      { speaker: 'RYLAND', text: 'Cold logic. The mission is more important than the crew.' },
+    ],
+
     // --- DOOR TO CORRIDOR ---
     'door-corridor': [
       { speaker: 'RYLAND', text: 'The corridor. It stretches ahead, dimly lit. The ship hums with a low vibration.' },
@@ -360,6 +379,7 @@ const StoryEngine = (() => {
   }
 
   function advanceDialogue() {
+    if (!currentDialogue) return; // Already closed
     if (isTyping) {
       const line = currentDialogue[currentLineIndex];
       const textEl = document.getElementById('dialogue-text');
@@ -368,7 +388,7 @@ const StoryEngine = (() => {
     }
 
     currentLineIndex++;
-    if (currentLineIndex < currentDialogue.length) {
+    if (currentDialogue && currentLineIndex < currentDialogue.length) {
       showNextLine();
     } else {
       closeDialogue();
@@ -394,16 +414,17 @@ const StoryEngine = (() => {
     const textEl = document.getElementById('wakeup-text');
     const overlay = document.getElementById('wakeup-overlay');
     const skipHint = document.getElementById('skip-hint');
-    
-    // Play beep audio
+
+    // Play beep audio (continues into med bay — stopped by game engine later)
     const beep = document.getElementById('audio-beep');
     if (beep) {
-      beep.volume = 0.5;
+      beep.volume = 0.3;
       beep.play().catch(e => console.log('Audio play failed', e));
     }
 
     screen.classList.add('active');
     isInWakeup = true;
+    wakeupCallback = callback; // Store for force-skip
 
     // Show skip hint
     if (skipHint) skipHint.classList.remove('hidden');
@@ -412,6 +433,7 @@ const StoryEngine = (() => {
     overlay.style.opacity = '1';
 
     await skippableSleep(1000);
+    if (!isInWakeup) return; // force-skipped
 
     // Fade the overlay slightly
     overlay.style.opacity = '0.8';
@@ -419,11 +441,13 @@ const StoryEngine = (() => {
 
     const thoughts = dialogues.wakeup;
     for (let i = 0; i < thoughts.length; i++) {
-      if (!isInWakeup) break; // early exit if fully skipped
+      if (!isInWakeup) return; // force-skipped
 
       textEl.textContent = '';
       await typeText(textEl, thoughts[i].text, 40);
+      if (!isInWakeup) return;
       await skippableSleep(1500);
+      if (!isInWakeup) return;
 
       // Gradually lighten
       const progress = (i + 1) / thoughts.length;
@@ -431,40 +455,70 @@ const StoryEngine = (() => {
     }
 
     await skippableSleep(800);
+    if (!isInWakeup) return;
 
     // Fade out wake up screen
     screen.style.transition = 'opacity 1.5s ease';
     screen.style.opacity = '0';
 
     await skippableSleep(1500);
-    screen.classList.remove('active');
-    screen.style.opacity = '';
+    if (!isInWakeup) return;
+
+    // Clean finish
+    forceEndWakeup();
+  }
+
+  // Stored callback for wakeup
+  let wakeupCallback = null;
+
+  // Force-end wakeup: cleans up ALL screens instantly
+  function forceEndWakeup() {
+    if (!isInWakeup && !wakeupCallback) return;
     isInWakeup = false;
 
-    if (skipHint) skipHint.classList.add('hidden');
-    
-    // Stop beep audio
-    if (beep) beep.pause();
+    // Clear any pending timers
+    clearTimeout(typeTimer);
+    clearTimeout(wakeupSleepTimer);
+    isTyping = false;
+    wakeupSleepTimer = null;
+    wakeupSkipResolve = null;
 
-    if (callback) callback();
+    // Force hide wakeup screen
+    const screen = document.getElementById('wakeup-screen');
+    screen.classList.remove('active');
+    screen.style.opacity = '';
+    screen.style.transition = '';
+    screen.style.display = 'none';
+
+    const skipHint = document.getElementById('skip-hint');
+    if (skipHint) skipHint.classList.add('hidden');
+
+    // Fire callback exactly once
+    if (wakeupCallback) {
+      const cb = wakeupCallback;
+      wakeupCallback = null;
+      cb();
+    }
   }
 
   // Fully skip the wakeup — jump straight to game world
   function skipWakeup() {
-    if (!isInWakeup) return;
-    isInWakeup = false;
-    skipCurrentWakeupStep();
+    if (!isInWakeup && !wakeupCallback) return;
+    forceEndWakeup();
   }
 
-  // ===== FLASHBACK (now skippable) =====
+  // ===== FLASHBACK (separate skip state from wakeup) =====
+  let isInFlashback = false;
+  let flashbackCallback = null;
+
   async function playFlashback(flashbackKey, callback) {
     const data = flashbacks[flashbackKey];
-    if (!data) return;
+    if (!data) { if (callback) callback(); return; }
 
     const overlay = document.getElementById('flashback-overlay');
     const textEl = document.getElementById('flashback-text');
     const labelEl = overlay.querySelector('.flashback-label');
-    
+
     // Play launch audio for crew flashback
     const launchAudio = document.getElementById('audio-launch');
     if (flashbackKey === 'crew' && launchAudio) {
@@ -475,26 +529,47 @@ const StoryEngine = (() => {
 
     labelEl.textContent = `◆ ${data.title} ◆`;
     overlay.classList.remove('hidden');
-    isInWakeup = true; // reuse the skip mechanism
+    isInFlashback = true;
+    isInWakeup = true; // for skip mechanism reuse
+    flashbackCallback = callback;
 
     for (let i = 0; i < data.lines.length; i++) {
-      if (!isInWakeup) break;
+      if (!isInFlashback) break;
       textEl.textContent = '';
       await typeText(textEl, data.lines[i], 30);
+      if (!isInFlashback) break;
       await skippableSleep(2000);
+      if (!isInFlashback) break;
     }
 
-    await skippableSleep(1000);
+    // Clean up
+    forceEndFlashback(flashbackKey);
+  }
+
+  function forceEndFlashback(flashbackKey) {
+    isInFlashback = false;
     isInWakeup = false;
 
+    clearTimeout(typeTimer);
+    clearTimeout(wakeupSleepTimer);
+    isTyping = false;
+    wakeupSleepTimer = null;
+    wakeupSkipResolve = null;
+
     // Stop audio
+    const launchAudio = document.getElementById('audio-launch');
     if (flashbackKey === 'crew' && launchAudio) {
       launchAudio.pause();
     }
 
-    // Click or space to close
+    const overlay = document.getElementById('flashback-overlay');
     overlay.classList.add('hidden');
-    if (callback) callback();
+
+    if (flashbackCallback) {
+      const cb = flashbackCallback;
+      flashbackCallback = null;
+      cb();
+    }
   }
 
   // ===== EPILOGUE (now added) =====
@@ -556,7 +631,7 @@ const StoryEngine = (() => {
   }
 
   function isWakeupActive() {
-    return isInWakeup;
+    return isInWakeup || isInFlashback;
   }
 
   // ===== PUBLIC API =====

@@ -69,6 +69,24 @@ const InteractionSystem = (() => {
         }
       },
     },
+    oxygen: {
+      prompt: 'Check life support',
+      dialogue: 'oxygen',
+      onComplete: () => { interacted.add('oxygen'); },
+    },
+    supplies: {
+      prompt: 'Open supply cabinet',
+      dialogue: 'supplies',
+      onComplete: () => { interacted.add('supplies'); },
+    },
+    emergency: {
+      prompt: 'Read emergency panel',
+      dialogue: 'emergency',
+      onComplete: () => {
+        interacted.add('emergency');
+        checkDiscoveries();
+      },
+    },
     'door-corridor': {
       prompt: 'Enter corridor',
       dialogue: 'door-corridor',
