@@ -553,12 +553,14 @@ body.in-game {
   align-items: center;
   justify-content: center;
   opacity: 0;
+  pointer-events: none;
   transition: opacity 1s ease;
   cursor: pointer;
 }
 
 .flashback-overlay:not(.hidden) {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .flashback-label {

@@ -28,15 +28,7 @@ const GameEngine = (() => {
     },
   };
 
-  // ===== CAMERA (hold-to-look) =====
-  let isLooking = false;
-  let lookSensitivity = 0.3;
-  let cameraYaw = 0;
-  let cameraPitch = 0;
-  let lastMouseX = 0;
-  let lastMouseY = 0;
-
-  // ===== WASD =====
+  // ===== WASD MOVEMENT =====
   const keys = { w: false, a: false, s: false, d: false };
   const moveSpeed = 5;
   let lastFrameTime = 0;
@@ -48,65 +40,8 @@ const GameEngine = (() => {
     'control-room': { minX: -4.3, maxX: 4.3, minZ: 19.0, maxZ: 31.0 },
   };
 
-  // ===== SETUP CONTROLS =====
-  function setupControls() {
-    // ---- HOLD-TO-LOOK: listen on DOCUMENT, not canvas ----
-    // This avoids A-Frame's canvas event interception
-    document.addEventListener('mousedown', (e) => {
-      // Don't look during UI interactions
-      if (!state.inGameWorld) return;
-      if (StoryEngine.isDialogueActive()) return;
-
-      // Don't look when clicking on UI overlays
-      const isUI = e.target.closest('#dialogue-box, #intro-screen, #wakeup-screen, #flashback-overlay, #objective-popup, .btn-glow');
-      if (isUI) return;
-
-      e.preventDefault();
-      isLooking = true;
-      lastMouseX = e.clientX;
-      lastMouseY = e.clientY;
-      document.body.style.cursor = 'grabbing';
-    });
-
-    document.addEventListener('mouseup', () => {
-      isLooking = false;
-      document.body.style.cursor = '';
-    });
-
-    document.addEventListener('mousemove', (e) => {
-      if (!isLooking || !state.controlsEnabled) return;
-
-      const dx = e.clientX - lastMouseX;
-      const dy = e.clientY - lastMouseY;
-      lastMouseX = e.clientX;
-      lastMouseY = e.clientY;
-
-      cameraYaw -= dx * lookSensitivity;
-      cameraPitch -= dy * lookSensitivity;
-      cameraPitch = Math.max(-85, Math.min(85, cameraPitch));
-
-      const camera = document.getElementById('player-camera');
-      if (camera) {
-        camera.setAttribute('rotation', { x: cameraPitch, y: cameraYaw, z: 0 });
-      }
-    });
-
-    // Prevent context menu
-    document.addEventListener('contextmenu', (e) => {
-      if (state.inGameWorld) e.preventDefault();
-    });
-
-    // Prevent drag on canvas
-    const scene = document.getElementById('game-scene');
-    scene.addEventListener('loaded', () => {
-      const canvas = scene.canvas;
-      if (canvas) {
-        canvas.addEventListener('dragstart', (e) => e.preventDefault());
-        canvas.setAttribute('draggable', 'false');
-      }
-    });
-
-    // ---- KEYBOARD ----
+  // ===== KEYBOARD SETUP =====
+  function setupKeyboard() {
     document.addEventListener('keydown', (e) => {
       const key = e.key.toLowerCase();
       if (key in keys) keys[key] = true;
@@ -126,11 +61,9 @@ const GameEngine = (() => {
       const key = e.key.toLowerCase();
       if (key in keys) keys[key] = false;
     });
-
-    console.log('[GameEngine] Controls initialized');
   }
 
-  // ===== GAME LOOP =====
+  // ===== GAME LOOP (WASD + collision) =====
   function gameLoop(time) {
     requestAnimationFrame(gameLoop);
     if (!state.controlsEnabled || !state.inGameWorld) {
@@ -141,21 +74,23 @@ const GameEngine = (() => {
     const dt = Math.min((time - lastFrameTime) / 1000, 0.1);
     lastFrameTime = time;
 
-    const yawRad = cameraYaw * (Math.PI / 180);
-    let moveX = 0, moveZ = 0;
+    // Get yaw from the hold-to-look component
+    const camera = document.getElementById('player-camera');
+    const holdToLook = camera?.components?.['hold-to-look'];
+    const yaw = holdToLook ? holdToLook.getYaw() : 0;
+    const yawRad = yaw * (Math.PI / 180);
 
+    let moveX = 0, moveZ = 0;
     if (keys.w) { moveX -= Math.sin(yawRad); moveZ -= Math.cos(yawRad); }
     if (keys.s) { moveX += Math.sin(yawRad); moveZ += Math.cos(yawRad); }
     if (keys.a) { moveX -= Math.cos(yawRad); moveZ += Math.sin(yawRad); }
     if (keys.d) { moveX += Math.cos(yawRad); moveZ -= Math.sin(yawRad); }
 
     const len = Math.sqrt(moveX * moveX + moveZ * moveZ);
-    if (len > 0) {
-      moveX = (moveX / len) * moveSpeed * dt;
-      moveZ = (moveZ / len) * moveSpeed * dt;
-    } else {
-      return;
-    }
+    if (len === 0) return;
+
+    moveX = (moveX / len) * moveSpeed * dt;
+    moveZ = (moveZ / len) * moveSpeed * dt;
 
     const cameraRig = document.getElementById('camera-rig');
     if (!cameraRig) return;
@@ -195,17 +130,15 @@ const GameEngine = (() => {
       }
     });
 
-    // Setup controls & interactions
-    setupControls();
+    // Setup keyboard + interactions
+    setupKeyboard();
     setupAFrameInteractions();
 
     // Start game loop when scene ready
     const scene = document.getElementById('game-scene');
     scene.addEventListener('loaded', () => {
-      const camera = document.getElementById('player-camera');
-      camera.setAttribute('look-controls', 'enabled', false);
-      camera.setAttribute('wasd-controls', 'enabled', false);
       requestAnimationFrame(gameLoop);
+      console.log('[GameEngine] Scene loaded, game loop started');
     });
 
     console.log('[GameEngine] Initialized');
@@ -244,60 +177,43 @@ const GameEngine = (() => {
       document.getElementById('hud').classList.remove('hidden');
     }, 500);
 
-    // Enable controls + show first dialogue
+    // Enable controls + first dialogue
     setTimeout(() => {
-      state.controlsEnabled = true;
-
-      // Update mission status from UNKNOWN
+      enableControls();
       updateMission('EXPLORE MED BAY');
 
       StoryEngine.showDialogue('firstLook', () => {
-        StoryEngine.showObjective('Look around the med bay. Walk to the glowing objects to examine them.');
-        // Pulse interactive objects to draw attention
-        pulseInteractives();
+        StoryEngine.showObjective('Look around the med bay. Hold left-click + drag to look. Walk to glowing objects.');
       });
     }, 1500);
   }
 
-  // ===== PULSE INTERACTIVE OBJECTS =====
-  function pulseInteractives() {
-    const interactives = document.querySelectorAll('.interactive');
-    interactives.forEach(el => {
-      // Add a glow animation component
-      const origColor = el.getAttribute('material')?.color || '#ffffff';
-      el.setAttribute('animation__pulse', {
-        property: 'material.opacity',
-        from: 1,
-        to: 0.5,
-        dur: 1000,
-        dir: 'alternate',
-        loop: true,
-        easing: 'easeInOutSine'
-      });
-    });
-  }
-
-  // ===== CONTROLS =====
+  // ===== ENABLE/DISABLE CONTROLS =====
   function enableControls() {
     state.controlsEnabled = true;
+    // Enable the A-Frame hold-to-look component
+    const camera = document.getElementById('player-camera');
+    camera.setAttribute('hold-to-look', 'enabled', true);
   }
 
   function disableControls() {
     state.controlsEnabled = false;
+    const camera = document.getElementById('player-camera');
+    camera.setAttribute('hold-to-look', 'enabled', false);
   }
 
   // ===== A-FRAME INTERACTIONS =====
   function setupAFrameInteractions() {
     const scene = document.getElementById('game-scene');
     scene.addEventListener('loaded', () => {
-      console.log('[GameEngine] A-Frame scene loaded');
+      console.log('[GameEngine] Setting up interactions');
 
       const interactives = document.querySelectorAll('.interactive');
       interactives.forEach(el => {
         el.addEventListener('mouseenter', () => {
           if (StoryEngine.isDialogueActive()) return;
-          const interactionKey = el.getAttribute('data-interaction');
-          const interaction = InteractionSystem.getInteraction(interactionKey);
+          const key = el.getAttribute('data-interaction');
+          const interaction = InteractionSystem.getInteraction(key);
           if (interaction) {
             showInteractionPrompt(interaction.prompt);
             document.getElementById('crosshair').classList.add('active');
@@ -311,14 +227,11 @@ const GameEngine = (() => {
 
         el.addEventListener('click', () => {
           if (StoryEngine.isDialogueActive()) return;
-          const interactionKey = el.getAttribute('data-interaction');
-          const interaction = InteractionSystem.getInteraction(interactionKey);
+          const key = el.getAttribute('data-interaction');
+          const interaction = InteractionSystem.getInteraction(key);
           if (interaction) {
             hideInteractionPrompt();
             document.getElementById('crosshair').classList.remove('active');
-            // Stop pulsing after first interaction
-            el.removeAttribute('animation__pulse');
-            el.setAttribute('material', 'opacity', 1);
             StoryEngine.showDialogue(interaction.dialogue, interaction.onComplete);
           }
         });
