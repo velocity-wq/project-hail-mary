@@ -26,6 +26,14 @@ const GameEngine = (() => {
       position: { x: 0, y: 0, z: 22 },
       label: 'CONTROL ROOM',
     },
+    laboratory: {
+      position: { x: 0, y: 0, z: 36 },
+      label: 'LABORATORY',
+    },
+    airlock: {
+      position: { x: 0, y: 0, z: 50 },
+      label: 'AIRLOCK',
+    },
   };
 
   // ===== WASD MOVEMENT =====
@@ -38,6 +46,8 @@ const GameEngine = (() => {
     medbay:         { minX: -3.3, maxX: 3.3, minZ: -4.3, maxZ: 4.3 },
     corridor:       { minX: -1.2, maxX: 1.2, minZ: 5.0, maxZ: 19.0 },
     'control-room': { minX: -4.3, maxX: 4.3, minZ: 19.0, maxZ: 31.0 },
+    laboratory:     { minX: -3.8, maxX: 3.8, minZ: 35.5, maxZ: 44.5 },
+    airlock:        { minX: -2.3, maxX: 2.3, minZ: 50.5, maxZ: 57.5 },
   };
 
   // ===== KEYBOARD SETUP =====
@@ -284,6 +294,52 @@ const GameEngine = (() => {
     document.getElementById('hud-mission-text').textContent = text;
   }
 
+  // ===== PUZZLE UI HELPERS =====
+  function openPuzzleUI(uiId) {
+    disableControls();
+    document.getElementById(uiId).classList.remove('hidden');
+    // We remove the class 'in-game' slightly so cursor works normal over UI
+    document.body.classList.remove('in-game');
+  }
+
+  function closePuzzleUI(uiId) {
+    document.getElementById(uiId).classList.add('hidden');
+    document.body.classList.add('in-game');
+    enableControls();
+  }
+
+  function toggleHazardMode(enable) {
+    const hazardLight = document.getElementById('hazard-light');
+    const globalAmbient = document.getElementById('global-ambient');
+    // Also change HUD
+    const hudTop = document.querySelector('.hud-top');
+    
+    if (enable) {
+      hazardLight.setAttribute('visible', 'true');
+      hazardLight.setAttribute('intensity', '1.0');
+      // Adding pulse animation dynamically
+      hazardLight.setAttribute('animation__hazardpulse', {
+        property: 'intensity',
+        from: 0.5,
+        to: 1.5,
+        dur: 1000,
+        dir: 'alternate',
+        loop: true
+      });
+      globalAmbient.setAttribute('intensity', '0.2');
+      hudTop.style.color = 'var(--red)';
+      document.querySelector('.hud-mission .hud-value').style.color = 'var(--red)';
+      document.querySelector('.hud-mission .hud-value').classList.add('warning-text');
+    } else {
+      hazardLight.setAttribute('visible', 'false');
+      hazardLight.removeAttribute('animation__hazardpulse');
+      globalAmbient.setAttribute('intensity', '1.2');
+      hudTop.style.color = '';
+      document.querySelector('.hud-mission .hud-value').classList.remove('warning-text');
+      document.querySelector('.hud-mission .hud-value').style.color = 'var(--orange)';
+    }
+  }
+
   return {
     init,
     startGame,
@@ -291,6 +347,9 @@ const GameEngine = (() => {
     updateMission,
     enableControls,
     disableControls,
+    openPuzzleUI,
+    closePuzzleUI,
+    toggleHazardMode,
   };
 })();
 
